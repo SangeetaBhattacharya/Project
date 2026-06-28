@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nesso N1 Sensor Logger</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: #f6f7f9;
+      color: #222;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    input {
+      padding: 9px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button,
+    a.button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .start {
+      background: #0b7;
+      color: white;
+    }
+
+    .stop {
+      background: #c33;
+      color: white;
+    }
+
+    .export {
+      background: #246;
+      color: white;
+    }
+
+    .clear {
+      background: #777;
+      color: white;
+    }
+
+    .status {
+      font-weight: bold;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #e2e2e2;
+      padding: 8px;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #eef1f5;
+      position: sticky;
+      top: 0;
+    }
+
+    .table-wrap {
+      max-height: 520px;
+      overflow: auto;
+    }
+
+    .muted {
+      color: #666;
+    }
+
+    .error {
+      color: #c33;
+    }
+
+    .last-line {
+      font-family: Consolas, monospace;
+      background: #f0f0f0;
+      padding: 8px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Nesso N1 Sensor Logger</h1>
+
+  <div class="card">
+    <form class="row" method="post" action="/start">
+      <div>
+        <label for="port">Serial port</label>
+        <input id="port" name="port" value="COM3">
+      </div>
+
+      <div>
+        <label for="baud">Baud rate</label>
+        <input id="baud" name="baud" value="115200">
+      </div>
+
+      <button class="start" type="submit">Start logging</button>
+    </form>
+
+    <form method="post" action="/stop" style="display:inline-block; margin-top: 12px;">
+      <button class="stop" type="submit">Stop logging</button>
+    </form>
+
+    <a class="button export" href="/export">Download CSV</a>
+
+    <form method="post" action="/clear" style="display:inline-block;" onsubmit="return confirm('Clear all saved readings?');">
+      <button class="clear" type="submit">Clear table</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <p>Status: <span id="running" class="status">Loading...</span></p>
+
+    <p class="muted">
+      Port: <span id="portText"></span> |
+      Baud: <span id="baudText"></span> |
+      Started: <span id="startedAt"></span>
+    </p>
+
+    <p>Last line received:</p>
+    <div id="lastLine" class="last-line">Waiting...</div>
+
+    <p id="lastError" class="error"></p>
+  </div>
+
+  <div class="card">
+    <h2>Saved readings</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Received at</th>
+            <th>Time ms</th>
+            <th>Volume mL</th>
+            <th>Pulses</th>
+            <th>Turbidity raw</th>
+            <th>Vout</th>
+            <th>Vin</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody id="readingsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function loadStatus() {
+      const response = await fetch('/api/status');
+      const status = await response.json();
+
+      document.getElementById('running').textContent =
+        status.running ? 'Logging' : 'Stopped';
+
+      document.getElementById('running').style.color =
+        status.running ? '#0a7' : '#c33';
+
+      document.getElementById('portText').textContent =
+        status.port || '-';
+
+      document.getElementById('baudText').textContent =
+        status.baud || '-';
+
+      document.getElementById('startedAt').textContent =
+        status.started_at || '-';
+
+      document.getElementById('lastLine').textContent =
+        status.last_line || 'No line received yet';
+
+      document.getElementById('lastError').textContent =
+        status.last_error ? 'Error: ' + status.last_error : '';
+    }
+
+    async function loadReadings() {
+      const response = await fetch('/api/readings?limit=100');
+      const readings = await response.json();
+
+      const body = document.getElementById('readingsBody');
+      body.innerHTML = '';
+
+      for (const r of readings) {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${r.id ?? ''}</td>
+          <td>${r.received_at ?? ''}</td>
+          <td>${r.device_time_ms ?? ''}</td>
+          <td>${r.volume_ml ?? ''}</td>
+          <td>${r.pulses ?? ''}</td>
+          <td>${r.turbidity_raw ?? ''}</td>
+          <td>${r.vout ?? ''}</td>
+          <td>${r.vin ?? ''}</td>
+          <td>${r.status ?? ''}</td>
+        `;
+
+        body.appendChild(tr);
+      }
+    }
+
+    async function refresh() {
+      await loadStatus();
+      await loadReadings();
+    }
+
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>
