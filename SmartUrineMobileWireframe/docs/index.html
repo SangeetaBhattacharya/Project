@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b5f6d" />
+  <title>Smart Urine Monitoring – Mobile Wireframe</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell" aria-label="Smart Urine Monitoring mobile wireframe">
+    <div class="prototype-ribbon">Interactive wireframe · demo data only</div>
+
+    <section id="login-screen" class="screen active auth-screen" data-screen="login">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">◉</div>
+        <p class="eyebrow">SMART URINE MONITORING</p>
+        <h1>Fluid Balance Monitor</h1>
+        <p class="muted">Prototype mobile interface for clinicians and healthcare staff.</p>
+      </div>
+
+      <form id="login-form" class="card form-card">
+        <label>
+          Work email
+          <input id="email" type="email" value="clinician@example.nhs.uk" autocomplete="username" required />
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" value="prototype" autocomplete="current-password" required />
+        </label>
+        <button class="btn primary" type="submit">Sign in</button>
+        <button class="text-btn" type="button" id="demo-login">Continue in demo mode</button>
+      </form>
+
+      <p class="clinical-note">Wireframe only — not for clinical decision-making or real patient data.</p>
+    </section>
+
+    <section id="app-screen" class="screen" data-screen="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">SMART URINE MONITORING</p>
+          <h2 id="page-title">Scan urinary bag</h2>
+        </div>
+        <button id="notification-button" class="icon-button" aria-label="Notifications">🔔<span id="notification-dot" class="notification-dot hidden"></span></button>
+      </header>
+
+      <div class="view active" id="scan-view" data-view="scan">
+        <div class="section-intro">
+          <h3>Link a urinary bag</h3>
+          <p>Scan the QR label on the urinary bag to link the patient, bag and Nesso N1 device.</p>
+        </div>
+
+        <div class="camera-card">
+          <video id="camera" playsinline muted></video>
+          <div id="camera-placeholder" class="camera-placeholder">
+            <div class="scan-frame" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <p>Position the bag QR code inside the frame</p>
+          </div>
+          <div class="scan-line" aria-hidden="true"></div>
+        </div>
+
+        <div id="scan-message" class="status-line">Camera is off.</div>
+        <button id="start-camera" class="btn secondary">Start camera / QR scan</button>
+        <button id="demo-scan" class="btn primary">Use demo QR code</button>
+
+        <div class="link-card">
+          <strong>Expected QR content</strong>
+          <code>UB-2026-001 | Patient P-0001 | Device NC-72X</code>
+        </div>
+      </div>
+
+      <div class="view" id="patient-view" data-view="patient">
+        <div class="patient-hero card">
+          <div class="avatar">DP</div>
+          <div>
+            <p class="eyebrow">LINKED PATIENT</p>
+            <h3>Demo Patient</h3>
+            <p class="muted">Patient ID P-0001</p>
+          </div>
+          <span class="pill success">Bag linked</span>
+        </div>
+
+        <div class="card details-list">
+          <div><span>Ward</span><strong>Ward 5A</strong></div>
+          <div><span>Bed</span><strong>12</strong></div>
+          <div><span>Urinary bag</span><strong>UB-2026-001</strong></div>
+          <div><span>Device</span><strong>Nesso N1 · NC-72X</strong></div>
+          <div><span>Monitoring</span><strong>Continuous</strong></div>
+          <div><span>Last QR scan</span><strong id="last-scan-time">Not scanned</strong></div>
+        </div>
+
+        <button class="btn primary nav-shortcut" data-go="dashboard">View fluid balance</button>
+        <button class="btn ghost nav-shortcut" data-go="scan">Scan a different bag</button>
+      </div>
+
+      <div class="view" id="dashboard-view" data-view="dashboard">
+        <div id="alert-banner" class="alert-banner hidden" role="alert">
+          <div class="alert-icon">!</div>
+          <div>
+            <strong>Urine volume above threshold</strong>
+            <p><span id="alert-volume">0</span> mL recorded; threshold is <span id="alert-threshold">0</span> mL.</p>
+          </div>
+          <button id="ack-alert" class="small-btn">Acknowledge</button>
+        </div>
+
+        <div class="dashboard-head">
+          <div>
+            <p class="eyebrow">PATIENT P-0001 · BAG UB-2026-001</p>
+            <h3>Current fluid output</h3>
+          </div>
+          <span id="connection-pill" class="pill">Demo feed</span>
+        </div>
+
+        <div class="card metric-card">
+          <div class="metric-topline">
+            <span>Urine volume</span>
+            <span id="volume-status" class="pill success">Within threshold</span>
+          </div>
+          <div class="big-number"><span id="volume-value">50.4</span><small>mL</small></div>
+          <div class="progress-track"><div id="volume-progress" class="progress-fill"></div></div>
+          <p class="progress-caption"><span>0 mL</span><span>Alert threshold: <strong id="threshold-inline">400</strong> mL</span></p>
+        </div>
+
+        <div class="metric-grid">
+          <div class="card mini-metric"><span>Clarity</span><strong id="clarity-value">CLOUDY</strong><small>Sensor state</small></div>
+          <div class="card mini-metric"><span>Pulses</span><strong id="pulses-value">226</strong><small>Flow sensor</small></div>
+        </div>
+
+        <div class="card source-card">
+          <div class="source-header">
+            <div>
+              <span class="eyebrow">PROTOTYPE INPUT</span>
+              <h4>Nesso N1 sensor feed</h4>
+            </div>
+            <span id="feed-time">Sample reading</span>
+          </div>
+          <div class="sensor-row"><span>Turbidity raw</span><strong id="raw-value">1731</strong></div>
+          <div class="sensor-row"><span>Vout</span><strong><span id="vout-value">1.39</span> V</strong></div>
+          <div class="sensor-row"><span>Vin</span><strong><span id="vin-value">2.09</span> V</strong></div>
+          <div class="button-row">
+            <button id="serial-connect" class="btn secondary compact">Connect Web Serial</button>
+            <button id="simulate-reading" class="btn ghost compact">+50 mL demo</button>
+          </div>
+          <p id="serial-status" class="helper">Web Serial is optional; demo mode works on GitHub Pages without hardware.</p>
+        </div>
+
+        <div class="card threshold-callout">
+          <div><strong>High-volume alert</strong><p>Current threshold: <span id="threshold-card">400</span> mL</p></div>
+          <button class="small-btn nav-shortcut" data-go="settings">Change</button>
+        </div>
+      </div>
+
+      <div class="view" id="notifications-view" data-view="notifications">
+        <div class="section-intro">
+          <h3>Notifications</h3>
+          <p>Clinical alerts created by the monitoring prototype.</p>
+        </div>
+        <div id="notification-list" class="notification-list">
+          <div class="empty-state">
+            <div>🔔</div>
+            <strong>No alerts yet</strong>
+            <p>An alert will appear here when the monitored urine volume exceeds the configured threshold.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" id="settings-view" data-view="settings">
+        <div class="section-intro">
+          <h3>Alert threshold</h3>
+          <p>Set the urine-volume level at which this patient should generate an app notification.</p>
+        </div>
+
+        <form id="threshold-form" class="card form-card">
+          <label>
+            High urine volume threshold (mL)
+            <input id="threshold-input" type="number" min="50" max="2000" step="10" value="400" />
+          </label>
+          <input id="threshold-range" type="range" min="50" max="1000" step="10" value="400" aria-label="High urine volume threshold" />
+          <div class="range-labels"><span>50 mL</span><strong><span id="threshold-preview">400</span> mL</strong><span>1000 mL</span></div>
+          <button type="submit" class="btn primary">Save threshold</button>
+        </form>
+
+        <div class="card settings-card">
+          <div><span>Alert channel</span><strong>In-app notification</strong></div>
+          <div><span>Patient</span><strong>P-0001</strong></div>
+          <div><span>Bag</span><strong>UB-2026-001</strong></div>
+          <div><span>Data source</span><strong id="settings-source">Demo / Web Serial</strong></div>
+        </div>
+
+        <div class="card repo-card">
+          <p class="eyebrow">PROJECT LINKS</p>
+          <h4>Prototype source files</h4>
+          <a href="https://github.com/SangeetaBhattacharya/Project" target="_blank" rel="noreferrer">Open Project repository ↗</a>
+          <a href="https://github.com/SangeetaBhattacharya/Project/blob/main/urine_meter_nesso_n1_wifi_laptop_excel.ino" target="_blank" rel="noreferrer">Laptop / Web Serial firmware ↗</a>
+          <a href="https://github.com/SangeetaBhattacharya/Project/blob/main/urine_meter_nesso_n1_wifi_excel.ino" target="_blank" rel="noreferrer">Wi-Fi / Excel firmware ↗</a>
+          <a href="https://sangeetabhattacharya.github.io/index/" target="_blank" rel="noreferrer">Existing Nesso N1 Sensor Logger ↗</a>
+        </div>
+      </div>
+
+      <nav class="bottom-nav" aria-label="Primary navigation">
+        <button class="nav-item active" data-go="scan"><span>⌗</span><small>Scan</small></button>
+        <button class="nav-item" data-go="patient"><span>♙</span><small>Patient</small></button>
+        <button class="nav-item" data-go="dashboard"><span>▥</span><small>Balance</small></button>
+        <button class="nav-item" data-go="notifications"><span>♢</span><small>Alerts</small></button>
+        <button class="nav-item" data-go="settings"><span>⚙</span><small>Settings</small></button>
+      </nav>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
