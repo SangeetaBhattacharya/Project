@@ -1,11 +1,21 @@
 const STORAGE_ROWS =
-  'smartUrineFluidRowsV2';
+  'smartUrineFluidRowsV3';
 
-const STORAGE_THRESHOLD =
-  'urineThreshold';
+const STORAGE_HOURLY_MIN =
+  'hourlyUrineMinMl';
+
+const STORAGE_HOURLY_MAX =
+  'hourlyUrineMaxMl';
 
 const SESSION_LAST_SENSOR =
   'smartUrineLastSensorTotal';
+
+
+const DEMO_BAG_QR =
+  'BAG=UB-2026-001|' +
+  'PATIENT=P-0001|' +
+  'DEVICE=NC-72X|' +
+  'CAPACITY_ML=2000';
 
 
 const state = {
@@ -18,13 +28,6 @@ const state = {
 
   scanned:
     false,
-
-  threshold:
-    Number(
-      localStorage.getItem(
-        STORAGE_THRESHOLD
-      )
-    ) || 400,
 
   reading: {
 
@@ -45,6 +48,46 @@ const state = {
 
     clarity:
       'UNKNOWN'
+
+  },
+
+  bag: {
+
+    id:
+      null,
+
+    patientId:
+      'P-0001',
+
+    deviceId:
+      null,
+
+    capacityMl:
+      0,
+
+    startSensorTotal:
+      0,
+
+    sessionId:
+      null
+
+  },
+
+  hourlyLimits: {
+
+    minMl:
+      Number(
+        localStorage.getItem(
+          STORAGE_HOURLY_MIN
+        )
+      ) || 50,
+
+    maxMl:
+      Number(
+        localStorage.getItem(
+          STORAGE_HOURLY_MAX
+        )
+      ) || 200
 
   },
 
@@ -112,22 +155,22 @@ const titles = {
 
 const $ =
   id =>
-    document.getElementById(id);
+    document.getElementById(
+      id
+    );
 
 
-
-/* ==========================
-   TOAST
-========================== */
-
-
-function toast(message) {
+function toast(
+  message
+) {
 
   const el =
     $('toast');
 
+
   el.textContent =
     message;
+
 
   el.classList.add(
     'show'
@@ -141,32 +184,70 @@ function toast(message) {
 
   toast.timer =
     setTimeout(
+
       () =>
         el.classList.remove(
           'show'
         ),
+
       2200
+
     );
 
 }
 
 
+function escapeHtml(
+  value
+) {
 
-/* ==========================
-   LOGIN
-========================== */
+  return String(
+    value ?? ''
+  )
+  .replace(
 
+    /[&<>'"]/g,
+
+    c => ({
+
+      '&':
+        '&amp;',
+
+      '<':
+        '&lt;',
+
+      '>':
+        '&gt;',
+
+      "'":
+        '&#39;',
+
+      '"':
+        '&quot;'
+
+    }[c])
+
+  );
+
+}
+
+
+/* LOGIN */
 
 function login() {
 
   $('login-screen')
     .classList
-    .remove('active');
+    .remove(
+      'active'
+    );
 
 
   $('app-screen')
     .classList
-    .add('active');
+    .add(
+      'active'
+    );
 
 
   state.loggedIn =
@@ -180,13 +261,11 @@ function login() {
 }
 
 
+/* NAVIGATION */
 
-/* ==========================
-   NAVIGATION
-========================== */
-
-
-function showView(name) {
+function showView(
+  name
+) {
 
   state.currentView =
     name;
@@ -200,8 +279,12 @@ function showView(name) {
       view => {
 
         view.classList.toggle(
+
           'active',
-          view.dataset.view === name
+
+          view.dataset.view ===
+            name
+
         );
 
       }
@@ -216,21 +299,27 @@ function showView(name) {
       button => {
 
         button.classList.toggle(
+
           'active',
-          button.dataset.go === name
+
+          button.dataset.go ===
+            name
+
         );
 
       }
     );
 
 
-  $('page-title').textContent =
-    titles[name] ||
-    'Smart Urine Monitoring';
+  $('page-title')
+    .textContent =
+      titles[name] ||
+      'Smart Urine Monitoring';
 
 
   if (
-    name === 'dashboard'
+    name ===
+    'dashboard'
   ) {
 
     updateDashboard();
@@ -239,7 +328,8 @@ function showView(name) {
 
 
   if (
-    name === 'chart'
+    name ===
+    'chart'
   ) {
 
     renderFluidChart();
@@ -248,7 +338,8 @@ function showView(name) {
 
 
   if (
-    name === 'notifications'
+    name ===
+    'notifications'
   ) {
 
     renderNotifications();
@@ -257,67 +348,337 @@ function showView(name) {
 
 
   if (
-    name === 'settings'
+    name ===
+    'settings'
   ) {
 
-    syncThresholdInputs();
+    syncSettings();
 
   }
 
 }
 
 
+/* =====================================
+   QR CODE / BAG
+===================================== */
 
-/* ==========================
-   QR CODE
-========================== */
-
-
-function completeDemoScan(
-  source = 'Demo QR'
+function parseBagQr(
+  rawValue
 ) {
 
-  state.scanned =
-    true;
+  const fields =
+    {};
 
 
-  $('last-scan-time')
-    .textContent =
-      new Date()
-        .toLocaleTimeString(
-          [],
-          {
-            hour:
-              '2-digit',
+  String(
+    rawValue
+  )
+  .split(
+    '|'
+  )
+  .forEach(
+    part => {
 
-            minute:
-              '2-digit'
-          }
+      const pos =
+        part.indexOf(
+          '='
         );
 
 
-  $('scan-message')
-    .textContent =
-      `${source}: ` +
-      `UB-2026-001 linked ` +
-      `to Patient P-0001.`;
+      if (
+        pos ===
+        -1
+      ) {
+
+        return;
+
+      }
 
 
-  toast(
-    'Urinary bag linked successfully'
+      const key =
+        part
+          .slice(
+            0,
+            pos
+          )
+          .trim()
+          .toUpperCase();
+
+
+      const value =
+        part
+          .slice(
+            pos + 1
+          )
+          .trim();
+
+
+      if (
+        key &&
+        value
+      ) {
+
+        fields[key] =
+          value;
+
+      }
+
+    }
   );
 
 
-  setTimeout(
-    () =>
-      showView(
-        'patient'
-      ),
-    450
+  const capacity =
+    Number(
+      fields.CAPACITY_ML
+    );
+
+
+  if (
+    !fields.BAG ||
+    !Number.isFinite(
+      capacity
+    ) ||
+    capacity <= 0
+  ) {
+
+    throw new Error(
+      'Invalid urinary bag QR code: BAG and CAPACITY_ML are required.'
+    );
+
+  }
+
+
+  return {
+
+    bag:
+      fields.BAG,
+
+    patient:
+      fields.PATIENT ||
+      'P-0001',
+
+    device:
+      fields.DEVICE ||
+      'Unknown device',
+
+    capacityMl:
+      capacity
+
+  };
+
+}
+
+
+function applyScannedBag(
+  rawValue,
+  sourceLabel =
+    'QR scan'
+) {
+
+  try {
+
+    const bag =
+      parseBagQr(
+        rawValue
+      );
+
+
+    state.bag = {
+
+      id:
+        bag.bag,
+
+      patientId:
+        bag.patient,
+
+      deviceId:
+        bag.device,
+
+      capacityMl:
+        bag.capacityMl,
+
+      /*
+        Record the sensor total
+        when this bag is attached.
+
+        Bag fullness then starts
+        from zero for this bag.
+      */
+
+      startSensorTotal:
+        Number(
+          state.reading.volume ||
+          0
+        ),
+
+      sessionId:
+        `${bag.bag}-${Date.now()}`
+
+    };
+
+
+    state.scanned =
+      true;
+
+
+    $('scan-message')
+      .textContent =
+        `${sourceLabel}: ` +
+        `${bag.bag} linked. ` +
+        `Capacity ${bag.capacityMl} mL.`;
+
+
+    $('last-scan-time')
+      .textContent =
+        new Date()
+          .toLocaleTimeString(
+
+            [],
+
+            {
+
+              hour:
+                '2-digit',
+
+              minute:
+                '2-digit'
+
+            }
+
+          );
+
+
+    updateBagIdentityUi();
+
+    evaluateBagCapacity();
+
+
+    toast(
+      'Urinary bag linked successfully'
+    );
+
+
+    setTimeout(
+
+      () =>
+        showView(
+          'patient'
+        ),
+
+      350
+
+    );
+
+
+    return true;
+
+  } catch (err) {
+
+    $('scan-message')
+      .textContent =
+        err.message ||
+        String(err);
+
+
+    toast(
+      'Bag QR could not be read'
+    );
+
+
+    return false;
+
+  }
+
+}
+
+
+function completeDemoScan() {
+
+  applyScannedBag(
+
+    DEMO_BAG_QR,
+
+    'Demo QR'
+
   );
 
 }
 
+
+function updateBagIdentityUi() {
+
+  const bagId =
+    state.bag.id ||
+    'Not scanned';
+
+
+  const patientId =
+    state.bag.patientId ||
+    'P-0001';
+
+
+  const deviceId =
+    state.bag.deviceId ||
+    'Not linked';
+
+
+  const capacity =
+
+    state.bag.capacityMl >
+    0
+
+      ? state.bag.capacityMl
+
+      : '—';
+
+
+  $('patient-id')
+    .textContent =
+      patientId;
+
+
+  $('patient-bag-id')
+    .textContent =
+      bagId;
+
+
+  $('patient-bag-capacity')
+    .textContent =
+      capacity;
+
+
+  $('patient-device-id')
+    .textContent =
+      deviceId;
+
+
+  $('dashboard-patient')
+    .textContent =
+      patientId;
+
+
+  $('dashboard-bag')
+    .textContent =
+      state.bag.id ||
+      'NO BAG';
+
+
+  $('settings-bag-id')
+    .textContent =
+      bagId;
+
+
+  $('settings-bag-capacity')
+    .textContent =
+      capacity;
+
+
+  $('settings-patient-id')
+    .textContent =
+      patientId;
+
+}
 
 
 async function startCamera() {
@@ -338,8 +699,10 @@ async function startCamera() {
           video: {
 
             facingMode: {
+
               ideal:
                 'environment'
+
             }
 
           },
@@ -366,7 +729,7 @@ async function startCamera() {
 
     $('scan-message')
       .textContent =
-        'Camera active. Looking for QR code…';
+        'Camera active. Looking for a QR code…';
 
 
     if (
@@ -391,7 +754,9 @@ async function startCamera() {
               'camera-on'
             )
           ) {
+
             return;
+
           }
 
 
@@ -407,17 +772,15 @@ async function startCamera() {
               codes.length
             ) {
 
-              $('scan-message')
-                .textContent =
-                  `QR detected: ` +
-                  codes[0].rawValue;
-
-
               stopCamera();
 
 
-              completeDemoScan(
+              applyScannedBag(
+
+                codes[0].rawValue,
+
                 'QR scan'
+
               );
 
 
@@ -441,16 +804,17 @@ async function startCamera() {
 
       $('scan-message')
         .textContent =
-          'QR detection is not supported ' +
-          'in this browser. Use Demo QR.';
+          'Camera active, but this browser ' +
+          'does not support QR detection. ' +
+          'Use Demo QR.';
 
     }
 
-  } catch (error) {
+  } catch (err) {
 
     $('scan-message')
       .textContent =
-        'Camera permission unavailable.';
+        'Camera permission unavailable. Use Demo QR.';
 
 
     toast(
@@ -460,7 +824,6 @@ async function startCamera() {
   }
 
 }
-
 
 
 function stopCamera() {
@@ -500,437 +863,430 @@ function stopCamera() {
 }
 
 
+/* =====================================
+   BAG CAPACITY
+===================================== */
 
-/* ==========================
-   THRESHOLD
-========================== */
+function getCurrentBagVolume() {
 
+  if (
+    !state.bag.id ||
+    !state.bag.capacityMl
+  ) {
 
-function syncThresholdInputs() {
+    return 0;
 
-  $('threshold-input')
-    .value =
-      state.threshold;
-
-
-  $('threshold-range')
-    .value =
-      Math.min(
-        1000,
-        state.threshold
-      );
+  }
 
 
-  $('threshold-preview')
-    .textContent =
-      state.threshold;
-
-
-  $('threshold-inline')
-    .textContent =
-      state.threshold;
-
-
-  $('threshold-card')
-    .textContent =
-      state.threshold;
-
-}
-
-
-
-function saveThreshold(
-  value
-) {
-
-  const next =
-    Math.max(
-
-      50,
-
-      Math.min(
-        2000,
-        Number(value) ||
-        400
-      )
-
-    );
-
-
-  state.threshold =
-    next;
-
-
-  localStorage.setItem(
-    STORAGE_THRESHOLD,
-    String(next)
-  );
-
-
-  syncThresholdInputs();
-
-  updateDashboard();
-
-
-  toast(
-    `Alert threshold saved at ${next} mL`
-  );
-
-}
-
-
-
-/* ==========================
-   DASHBOARD
-========================== */
-
-
-function updateDashboard() {
-
-  const r =
-    state.reading;
-
-
-  $('volume-value')
-    .textContent =
-      Number(
-        r.volume || 0
-      ).toFixed(1);
-
-
-  $('pulses-value')
-    .textContent =
-      Math.round(
-        Number(
-          r.pulses || 0
-        )
-      );
-
-
-  $('raw-value')
-    .textContent =
-      Math.round(
-        Number(
-          r.turbidityRaw || 0
-        )
-      );
-
-
-  $('vout-value')
-    .textContent =
-      Number(
-        r.vout || 0
-      ).toFixed(2);
-
-
-  $('vin-value')
-    .textContent =
-      Number(
-        r.vin || 0
-      ).toFixed(2);
-
-
-  $('clarity-value')
-    .textContent =
-      r.clarity ||
-      '—';
-
-
-  syncThresholdInputs();
-
-
-  const ratio =
-    Math.min(
-
-      (
-        Number(
-          r.volume || 0
-        )
-        /
-        state.threshold
-      )
-      *
-      100,
-
-      100
-
-    );
-
-
-  $('volume-progress')
-    .style
-    .width =
-      `${ratio}%`;
-
-
-  const exceeded =
+  const sensorTotal =
     Number(
-      r.volume || 0
+      state.reading.volume ||
+      0
+    );
+
+
+  let start =
+    Number(
+      state.bag.startSensorTotal ||
+      0
+    );
+
+
+  /*
+    If the Nesso itself was reset,
+    continue from zero.
+  */
+
+  if (
+    sensorTotal <
+    start
+  ) {
+
+    start =
+      0;
+
+
+    state.bag.startSensorTotal =
+      0;
+
+  }
+
+
+  return Math.max(
+
+    0,
+
+    sensorTotal -
+    start
+
+  );
+
+}
+
+
+function getBagFillStatus() {
+
+  const capacity =
+    Number(
+      state.bag.capacityMl ||
+      0
+    );
+
+
+  if (
+    capacity <= 0
+  ) {
+
+    return {
+
+      percentage:
+        0,
+
+      level:
+        'unknown',
+
+      shortLabel:
+        'Bag not scanned',
+
+      message:
+        'Scan the urinary bag to load its capacity.'
+
+    };
+
+  }
+
+
+  const volume =
+    getCurrentBagVolume();
+
+
+  const percentage =
+    (
+      volume /
+      capacity
     )
-    >
-    state.threshold;
-
-
-  $('volume-progress')
-    .classList
-    .toggle(
-      'danger',
-      exceeded
-    );
-
-
-  $('volume-status')
-    .textContent =
-      exceeded
-        ? 'Threshold exceeded'
-        : 'Within threshold';
-
-
-  $('volume-status')
-    .classList
-    .toggle(
-      'success',
-      !exceeded
-    );
-
-
-  $('volume-status')
-    .classList
-    .toggle(
-      'danger',
-      exceeded
-    );
+    *
+    100;
 
 
   if (
-    exceeded
+    percentage >
+    100
   ) {
 
-    triggerAlert();
+    return {
 
-  } else {
+      percentage,
 
-    $('alert-banner')
-      .classList
-      .add(
-        'hidden'
-      );
+      level:
+        'overflow',
+
+      shortLabel:
+        'Overflow risk',
+
+      message:
+        `Overflow risk: ` +
+        `${volume.toFixed(0)} mL recorded ` +
+        `in a ${capacity} mL bag.`
+
+    };
 
   }
 
 
-  updateChartLiveStrip();
-
-}
-
-
-
-/* ==========================
-   ALERTS
-========================== */
-
-
-function triggerAlert() {
-
-  $('alert-banner')
-    .classList
-    .remove(
-      'hidden'
-    );
-
-
-  $('alert-volume')
-    .textContent =
-      Number(
-        state.reading.volume || 0
-      ).toFixed(1);
-
-
-  $('alert-threshold')
-    .textContent =
-      state.threshold;
-
-
-  const key =
-    `${Math.floor(
-      Number(
-        state.reading.volume || 0
-      )
-    )}-${state.threshold}`;
-
-
-  const exists =
-    state.notifications
-      .some(
-        notification =>
-          notification.key === key
-      );
-
-
   if (
-    !exists
+    percentage >=
+    100
   ) {
 
-    state.notifications
-      .unshift({
+    return {
 
-        key,
+      percentage,
 
-        title:
-          'Urine volume above threshold',
+      level:
+        'full',
 
-        message:
-          `${
-            Number(
-              state.reading.volume || 0
-            ).toFixed(1)
-          } mL recorded; ` +
-          `threshold is ` +
-          `${state.threshold} mL.`,
+      shortLabel:
+        'Full',
 
-        time:
-          new Date()
+      message:
+        'Urinary bag has reached full capacity. Replace the bag.'
 
-      });
+    };
 
   }
 
 
-  $('notification-dot')
-    .classList
-    .remove(
-      'hidden'
-    );
+  if (
+    percentage >=
+    90
+  ) {
+
+    return {
+
+      percentage,
+
+      level:
+        'nearly-full',
+
+      shortLabel:
+        'Nearly full',
+
+      message:
+        'Urinary bag is at least 90% full.'
+
+    };
+
+  }
 
 
-  renderNotifications();
+  if (
+    percentage >=
+    75
+  ) {
+
+    return {
+
+      percentage,
+
+      level:
+        'three-quarter',
+
+      shortLabel:
+        '75% full',
+
+      message:
+        'Urinary bag is approximately three-quarters full.'
+
+    };
+
+  }
+
+
+  if (
+    percentage >=
+    50
+  ) {
+
+    return {
+
+      percentage,
+
+      level:
+        'half',
+
+      shortLabel:
+        'Half full',
+
+      message:
+        'Urinary bag is approximately half full.'
+
+    };
+
+  }
+
+
+  return {
+
+    percentage,
+
+    level:
+      'normal',
+
+    shortLabel:
+      'Below half',
+
+    message:
+      'Urinary bag is below half capacity.'
+
+  };
 
 }
 
 
-
-function renderNotifications() {
-
-  const list =
-    $('notification-list');
-
+function evaluateBagCapacity() {
 
   if (
-    !state.notifications.length
+    !state.bag.id ||
+    !state.bag.capacityMl
   ) {
-
-    list.innerHTML = `
-
-      <div class="empty-state">
-
-        <div>
-          🔔
-        </div>
-
-        <strong>
-          No alerts yet
-        </strong>
-
-        <p>
-          An alert will appear here
-          when urine volume exceeds
-          the configured threshold.
-        </p>
-
-      </div>
-
-    `;
-
 
     return;
 
   }
 
 
-  list.innerHTML =
-    state.notifications
-      .map(
-        notification => `
+  const status =
+    getBagFillStatus();
 
-          <div class="card notification-card">
 
-            <strong>
-              ${
-                escapeHtml(
-                  notification.title
-                )
-              }
-            </strong>
+  const prefix =
+    state.bag.sessionId ||
+    state.bag.id;
 
-            <p>
-              ${
-                escapeHtml(
-                  notification.message
-                )
-              }
-            </p>
 
-            <time>
-              ${
-                new Date(
-                  notification.time
-                )
-                .toLocaleString()
-              }
-            </time>
+  const milestones =
+    [
 
-          </div>
+      {
 
-        `
-      )
-      .join('');
+        pct:
+          50,
+
+        key:
+          '50',
+
+        title:
+          'Urinary bag half full',
+
+        message:
+          'Urinary bag has reached approximately 50% capacity.'
+
+      },
+
+      {
+
+        pct:
+          75,
+
+        key:
+          '75',
+
+        title:
+          'Urinary bag 75% full',
+
+        message:
+          'Urinary bag has reached approximately 75% capacity.'
+
+      },
+
+      {
+
+        pct:
+          90,
+
+        key:
+          '90',
+
+        title:
+          'Urinary bag nearly full',
+
+        message:
+          'Urinary bag has reached at least 90% capacity.'
+
+      },
+
+      {
+
+        pct:
+          100,
+
+        key:
+          '100',
+
+        title:
+          'Urinary bag full',
+
+        message:
+          'Urinary bag has reached full capacity. Replace the bag.'
+
+      }
+
+    ];
+
+
+  milestones
+    .forEach(
+      milestone => {
+
+        if (
+          status.percentage >=
+          milestone.pct
+        ) {
+
+          const added =
+            addNotification(
+
+              `${prefix}-bag-${milestone.key}`,
+
+              milestone.title,
+
+              milestone.message,
+
+              'bag'
+
+            );
+
+
+          if (
+            added
+          ) {
+
+            showMainAlert(
+
+              milestone.title,
+
+              milestone.message
+
+            );
+
+          }
+
+        }
+
+      }
+    );
+
+
+  if (
+    status.percentage >
+    100
+  ) {
+
+    const message =
+      `Overflow risk: ` +
+      `${getCurrentBagVolume().toFixed(0)} mL ` +
+      `is above the ` +
+      `${state.bag.capacityMl} mL bag capacity.`;
+
+
+    const added =
+      addNotification(
+
+        `${prefix}-bag-overflow`,
+
+        'URGENT: Urinary bag overflow risk',
+
+        message,
+
+        'bag'
+
+      );
+
+
+    if (
+      added
+    ) {
+
+      showMainAlert(
+
+        'URGENT: Urinary bag overflow risk',
+
+        message
+
+      );
+
+    }
+
+  }
 
 }
 
 
-
-/* ==========================
-   ESCAPE HTML
-========================== */
-
-
-function escapeHtml(
-  value
-) {
-
-  return String(
-    value ?? ''
-  )
-  .replace(
-    /[&<>'"]/g,
-    character => ({
-
-      '&':
-        '&amp;',
-
-      '<':
-        '&lt;',
-
-      '>':
-        '&gt;',
-
-      "'":
-        '&#39;',
-
-      '"':
-        '&quot;'
-
-    }[character])
-  );
-
-}
-
-
-
-/* ==========================
-   SENSOR READING
-========================== */
-
+/* =====================================
+   SENSOR DATA
+===================================== */
 
 function normalizeReading(
   input
@@ -1020,7 +1376,6 @@ function normalizeReading(
 }
 
 
-
 function acceptLiveReading(
   input,
   source =
@@ -1054,8 +1409,11 @@ function acceptLiveReading(
     .textContent =
       new Date()
         .toLocaleTimeString(
+
           [],
+
           {
+
             hour:
               '2-digit',
 
@@ -1064,7 +1422,9 @@ function acceptLiveReading(
 
             second:
               '2-digit'
+
           }
+
         );
 
 
@@ -1085,9 +1445,12 @@ function acceptLiveReading(
       source;
 
 
-  logAutomaticUrine(
+  processHourlySensorVolume(
     reading.volume
   );
+
+
+  evaluateBagCapacity();
 
 
   updateDashboard();
@@ -1095,7 +1458,7 @@ function acceptLiveReading(
 
   if (
     state.currentView ===
-      'chart'
+    'chart'
   ) {
 
     renderFluidChart();
@@ -1108,83 +1471,14 @@ function acceptLiveReading(
 }
 
 
-
-/* ==========================
-   DEMO READING
-========================== */
-
-
-function simulateReading() {
-
-  const previous =
-    Number(
-      state.reading.volume ||
-      0
-    );
-
-
-  const next =
-    previous +
-    50;
-
-
-  acceptLiveReading(
-
-    {
-
-      volume:
-        next,
-
-      pulses:
-        Number(
-          state.reading.pulses ||
-          0
-        )
-        +
-        224,
-
-      turbidityRaw:
-        1720 +
-        Math.floor(
-          Math.random() *
-          40
-        ),
-
-      vout:
-        1.36 +
-        Math.random() *
-        0.06,
-
-      vin:
-        2.04 +
-        Math.random() *
-        0.09,
-
-      clarity:
-        'CLOUDY'
-
-    },
-
-    'Demo feed'
-
-  );
-
-}
-
-
-
-/* ==========================
-   DIRECT WEB SERIAL
-========================== */
-
-
 function parsePrototypeLine(
   line
 ) {
 
   const clean =
     String(
-      line || ''
+      line ||
+      ''
     )
     .trim();
 
@@ -1209,28 +1503,42 @@ function parsePrototypeLine(
 
   if (
     parts.length >=
-      7
+    7
   ) {
 
     const [
+
       timeMs,
+
       volume,
+
       pulses,
+
       raw,
+
       vout,
+
       vin,
+
       status
+
     ] =
       parts;
 
 
     const nums =
       [
+
         volume,
+
         pulses,
+
         raw,
+
         vout,
+
         vin
+
       ]
       .map(
         Number
@@ -1281,7 +1589,6 @@ function parsePrototypeLine(
 }
 
 
-
 async function connectSerial() {
 
   if (
@@ -1294,7 +1601,8 @@ async function connectSerial() {
     $('serial-status')
       .textContent =
         'Web Serial unavailable. ' +
-        'Use Chrome/Edge or Sensor Logger.';
+        'Use desktop Chrome/Edge ' +
+        'or use the separate Sensor Logger.';
 
 
     return;
@@ -1305,7 +1613,8 @@ async function connectSerial() {
   try {
 
     state.serial.port =
-      await navigator.serial
+      await navigator
+        .serial
         .requestPort();
 
 
@@ -1324,6 +1633,11 @@ async function connectSerial() {
 
     state.liveSource =
       'Nesso N1 Web Serial';
+
+
+    $('settings-source')
+      .textContent =
+        state.liveSource;
 
 
     const decoder =
@@ -1352,8 +1666,11 @@ async function connectSerial() {
     ) {
 
       const {
+
         value,
+
         done
+
       } =
         await state.serial
           .reader
@@ -1363,12 +1680,15 @@ async function connectSerial() {
       if (
         done
       ) {
+
         break;
+
       }
 
 
       buffer +=
-        value || '';
+        value ||
+        '';
 
 
       const lines =
@@ -1387,25 +1707,110 @@ async function connectSerial() {
 
     }
 
-  } catch (error) {
+  } catch (err) {
 
     $('serial-status')
       .textContent =
-        `Serial connection failed: ${
-          error.message ||
-          error
-        }`;
+        `Serial connection not completed: ` +
+        `${err.message || err}`;
 
   }
 
 }
 
 
+/* DEMO SENSOR READING */
 
-/* ==========================
-   FLUID BALANCE STORAGE
-========================== */
+function simulateReading() {
 
+  /*
+    For demo mode, ensure the first
+    +250 mL is counted as an increment.
+  */
+
+  if (
+    state.lastSensorTotal ===
+      null
+
+    ||
+
+    !Number.isFinite(
+      state.lastSensorTotal
+    )
+  ) {
+
+    state.lastSensorTotal =
+      Number(
+        state.reading.volume ||
+        0
+      );
+
+
+    sessionStorage.setItem(
+
+      SESSION_LAST_SENSOR,
+
+      String(
+        state.lastSensorTotal
+      )
+
+    );
+
+  }
+
+
+  acceptLiveReading(
+
+    {
+
+      volume:
+        Number(
+          state.reading.volume ||
+          0
+        )
+        +
+        250,
+
+      pulses:
+        Number(
+          state.reading.pulses ||
+          0
+        )
+        +
+        1120,
+
+      turbidityRaw:
+        1720 +
+        Math.floor(
+          Math.random() *
+          40
+        ),
+
+      vout:
+        1.36 +
+        Math.random() *
+        .06,
+
+      vin:
+        2.04 +
+        Math.random() *
+        .09,
+
+      clarity:
+        'CLOUDY'
+
+    },
+
+    'Demo feed'
+
+  );
+
+}
+
+
+/* =====================================
+   HOURLY FLUID BALANCE
+===================================== */
 
 function loadFluidRows() {
 
@@ -1414,10 +1819,9 @@ function loadFluidRows() {
     const rows =
       JSON.parse(
 
-        localStorage
-          .getItem(
-            STORAGE_ROWS
-          )
+        localStorage.getItem(
+          STORAGE_ROWS
+        )
         ||
         '[]'
 
@@ -1439,7 +1843,6 @@ function loadFluidRows() {
 }
 
 
-
 function saveFluidRows() {
 
   localStorage.setItem(
@@ -1455,14 +1858,9 @@ function saveFluidRows() {
 }
 
 
-
-/* ==========================
-   HOURLY ROW
-========================== */
-
-
 function hourKey(
-  date = new Date()
+  date =
+    new Date()
 ) {
 
   const d =
@@ -1483,7 +1881,6 @@ function hourKey(
 }
 
 
-
 function hourLabel(
   key
 ) {
@@ -1495,6 +1892,7 @@ function hourLabel(
 
 
   return (
+
     String(
       d.getHours()
     )
@@ -1502,12 +1900,14 @@ function hourLabel(
       2,
       '0'
     )
+
     +
+
     '00'
+
   );
 
 }
-
 
 
 function makeRow(
@@ -1538,12 +1938,14 @@ function makeRow(
       '',
 
     initials:
-      ''
+      '',
+
+    sensorSeen:
+      false
 
   };
 
 }
-
 
 
 function getOrCreateCurrentRow() {
@@ -1579,14 +1981,19 @@ function getOrCreateCurrentRow() {
 
     state.fluidRows
       .sort(
+
         (a, b) =>
+
           new Date(
             a.key
           )
+
           -
+
           new Date(
             b.key
           )
+
       );
 
 
@@ -1598,7 +2005,6 @@ function getOrCreateCurrentRow() {
   return row;
 
 }
-
 
 
 function asNumber(
@@ -1614,43 +2020,19 @@ function asNumber(
   return Number.isFinite(
     number
   )
+
     ? number
+
     : 0;
 
 }
 
 
+/* =====================================
+   AUTOMATIC HOURLY URINE
+===================================== */
 
-function totalRecordedUrine() {
-
-  return state
-    .fluidRows
-    .reduce(
-
-      (
-        total,
-        row
-      ) =>
-
-        total +
-        asNumber(
-          row.urine
-        ),
-
-      0
-
-    );
-
-}
-
-
-
-/* ==========================
-   AUTOMATIC URINE LOGGING
-========================== */
-
-
-function logAutomaticUrine(
+function processHourlySensorVolume(
   cumulativeVolume
 ) {
 
@@ -1673,77 +2055,96 @@ function logAutomaticUrine(
   }
 
 
-  let previous =
-    state.lastSensorTotal;
+  const row =
+    getOrCreateCurrentRow();
 
+
+  row.sensorSeen =
+    true;
+
+
+  /*
+    First live reading establishes
+    the baseline.
+
+    This avoids incorrectly assigning
+    old cumulative urine to the
+    current hour when the app opens.
+  */
 
   if (
-    previous === null ||
+    state.lastSensorTotal ===
+      null
+
+    ||
+
     !Number.isFinite(
-      previous
+      state.lastSensorTotal
     )
   ) {
 
-    previous =
-      totalRecordedUrine() >
-      0
+    state.lastSensorTotal =
+      current;
 
-        ? current
 
-        : 0;
+    sessionStorage.setItem(
+
+      SESSION_LAST_SENSOR,
+
+      String(
+        current
+      )
+
+    );
+
+
+    saveFluidRows();
+
+
+    evaluateCompletedHours();
+
+
+    return;
 
   }
 
 
+  const previous =
+    state.lastSensorTotal;
+
+
   let delta;
 
+
+  /*
+    If the Nesso counter becomes
+    smaller, assume the device
+    counter was reset.
+  */
 
   if (
     current + 0.5 <
     previous
   ) {
 
-    /*
-      The Nesso counter has
-      been reset.
-    */
-
     delta =
       current;
 
 
-    state.notifications
-      .unshift({
+    addNotification(
 
-        key:
-          `reset-${Date.now()}`,
+      `nesso-reset-${Date.now()}`,
 
-        title:
-          'Nesso N1 volume counter reset',
+      'Nesso N1 volume counter reset',
 
-        message:
-          'A lower cumulative volume was received. ' +
-          'Automatic hourly logging continued from the new reading.',
+      'A lower cumulative sensor value was received. ' +
+      'Hourly logging continued from the new counter.',
 
-        time:
-          new Date()
+      'hourly'
 
-      });
-
-
-    $('notification-dot')
-      .classList
-      .remove(
-        'hidden'
-      );
+    );
 
   } else {
-
-    /*
-      Normal case:
-      new cumulative total
-      minus previous total.
-    */
 
     delta =
       current -
@@ -1768,71 +2169,934 @@ function logAutomaticUrine(
 
 
   /*
-    No change in sensor volume.
+    Add only NEW urine volume
+    to the current hourly row.
   */
 
   if (
-    delta <=
+    delta >
     0.01
+
+    &&
+
+    delta <=
+    5000
+  ) {
+
+    row.urine =
+      Math.round(
+
+        (
+          asNumber(
+            row.urine
+          )
+
+          +
+
+          delta
+        )
+
+        *
+
+        10
+
+      )
+
+      /
+
+      10;
+
+  }
+
+
+  saveFluidRows();
+
+
+  /*
+    HIGH hourly output can
+    alert immediately.
+  */
+
+  evaluateHourlyUrine(
+
+    row,
+
+    false
+
+  );
+
+
+  /*
+    LOW hourly output is checked
+    for completed hours.
+  */
+
+  evaluateCompletedHours();
+
+}
+
+
+/* =====================================
+   HOURLY THRESHOLD ALERTS
+===================================== */
+
+function evaluateHourlyUrine(
+  row,
+  hourCompleted =
+    false
+) {
+
+  if (
+    !row ||
+    !row.sensorSeen
   ) {
 
     return;
+
+  }
+
+
+  const urine =
+    asNumber(
+      row.urine
+    );
+
+
+  const min =
+    state.hourlyLimits.minMl;
+
+
+  const max =
+    state.hourlyLimits.maxMl;
+
+
+  const label =
+    hourLabel(
+      row.key
+    );
+
+
+  /*
+    HIGH OUTPUT:
+    Alert immediately.
+  */
+
+  if (
+    urine >
+    max
+  ) {
+
+    const message =
+      `${label}: ` +
+      `${urine.toFixed(1)} mL ` +
+      `has been recorded this hour. ` +
+      `Upper hourly threshold is ` +
+      `${max} mL/hour.`;
+
+
+    const added =
+      addNotification(
+
+        `hour-high-${row.key}-${max}`,
+
+        'High hourly urine output',
+
+        message,
+
+        'hourly'
+
+      );
+
+
+    if (
+      added
+    ) {
+
+      showMainAlert(
+
+        'High hourly urine output',
+
+        message
+
+      );
+
+    }
 
   }
 
 
   /*
-    Basic protection against
-    obviously invalid readings.
+    LOW OUTPUT:
+    Normally evaluate after
+    the hour has finished.
   */
 
   if (
-    delta >
-    5000
+    hourCompleted
+
+    &&
+
+    urine <
+    min
   ) {
+
+    const message =
+      `${label}: ` +
+      `${urine.toFixed(1)} mL ` +
+      `was recorded. ` +
+      `Lower hourly threshold is ` +
+      `${min} mL/hour.`;
+
+
+    const added =
+      addNotification(
+
+        `hour-low-${row.key}-${min}`,
+
+        'Low hourly urine output',
+
+        message,
+
+        'hourly'
+
+      );
+
+
+    if (
+      added
+    ) {
+
+      showMainAlert(
+
+        'Low hourly urine output',
+
+        message
+
+      );
+
+    }
+
+  }
+
+}
+
+
+function evaluateCompletedHours() {
+
+  const current =
+    hourKey();
+
+
+  state.fluidRows
+    .forEach(
+      row => {
+
+        if (
+          row.key !==
+            current
+
+          &&
+
+          row.sensorSeen
+        ) {
+
+          evaluateHourlyUrine(
+
+            row,
+
+            true
+
+          );
+
+        }
+
+      }
+    );
+
+}
+
+
+function getCurrentHourRow() {
+
+  return (
+
+    state.fluidRows
+      .find(
+        row =>
+          row.key ===
+          hourKey()
+      )
+
+    ||
+
+    getOrCreateCurrentRow()
+
+  );
+
+}
+
+
+function getCurrentHourlyStatus() {
+
+  const row =
+    getCurrentHourRow();
+
+
+  const urine =
+    asNumber(
+      row.urine
+    );
+
+
+  const min =
+    state.hourlyLimits.minMl;
+
+
+  const max =
+    state.hourlyLimits.maxMl;
+
+
+  if (
+    !row.sensorSeen
+  ) {
+
+    return {
+
+      label:
+        'Waiting for sensor',
+
+      level:
+        'unknown'
+
+    };
+
+  }
+
+
+  if (
+    urine >
+    max
+  ) {
+
+    return {
+
+      label:
+        'Above upper threshold',
+
+      level:
+        'danger'
+
+    };
+
+  }
+
+
+  /*
+    Current-hour value can be
+    below the lower threshold
+    without yet being an alert,
+    because the hour is still active.
+  */
+
+  if (
+    urine <
+    min
+  ) {
+
+    return {
+
+      label:
+        'Below lower threshold so far',
+
+      level:
+        'warning'
+
+    };
+
+  }
+
+
+  return {
+
+    label:
+      'Within hourly range',
+
+    level:
+      'success'
+
+  };
+
+}
+
+
+function saveHourlyThresholds(
+  minValue,
+  maxValue
+) {
+
+  const min =
+    Number(
+      minValue
+    );
+
+
+  const max =
+    Number(
+      maxValue
+    );
+
+
+  if (
+    !Number.isFinite(
+      min
+    )
+
+    ||
+
+    !Number.isFinite(
+      max
+    )
+
+    ||
+
+    min <
+    0
+
+    ||
+
+    max <=
+    min
+  ) {
+
+    toast(
+      'Check the hourly threshold values'
+    );
+
+
+    return false;
+
+  }
+
+
+  state.hourlyLimits.minMl =
+    min;
+
+
+  state.hourlyLimits.maxMl =
+    max;
+
+
+  localStorage.setItem(
+
+    STORAGE_HOURLY_MIN,
+
+    String(
+      min
+    )
+
+  );
+
+
+  localStorage.setItem(
+
+    STORAGE_HOURLY_MAX,
+
+    String(
+      max
+    )
+
+  );
+
+
+  toast(
+
+    `Hourly range saved: ` +
+    `${min}–${max} mL/hour`
+
+  );
+
+
+  evaluateHourlyUrine(
+
+    getCurrentHourRow(),
+
+    false
+
+  );
+
+
+  updateDashboard();
+
+
+  return true;
+
+}
+
+
+/* =====================================
+   DASHBOARD
+===================================== */
+
+function updateDashboard() {
+
+  const reading =
+    state.reading;
+
+
+  const bag =
+    getBagFillStatus();
+
+
+  const bagVolume =
+    getCurrentBagVolume();
+
+
+  const hourlyRow =
+    getCurrentHourRow();
+
+
+  const hourly =
+    getCurrentHourlyStatus();
+
+
+  /*
+    Sensor fields
+  */
+
+  $('sensor-total-value')
+    .textContent =
+      Number(
+        reading.volume ||
+        0
+      )
+      .toFixed(
+        1
+      );
+
+
+  $('pulses-value')
+    .textContent =
+      Math.round(
+        Number(
+          reading.pulses ||
+          0
+        )
+      );
+
+
+  $('raw-value')
+    .textContent =
+      Math.round(
+        Number(
+          reading.turbidityRaw ||
+          0
+        )
+      );
+
+
+  $('vout-value')
+    .textContent =
+      Number(
+        reading.vout ||
+        0
+      )
+      .toFixed(
+        2
+      );
+
+
+  $('vin-value')
+    .textContent =
+      Number(
+        reading.vin ||
+        0
+      )
+      .toFixed(
+        2
+      );
+
+
+  $('clarity-value')
+    .textContent =
+      reading.clarity ||
+      'UNKNOWN';
+
+
+  /*
+    Bag capacity display
+  */
+
+  $('bag-volume-value')
+    .textContent =
+      bagVolume.toFixed(
+        1
+      );
+
+
+  $('bag-percent')
+    .textContent =
+      Math.max(
+        0,
+        bag.percentage
+      )
+      .toFixed(
+        0
+      );
+
+
+  $('bag-capacity-display')
+    .textContent =
+
+      state.bag.capacityMl >
+      0
+
+        ? state.bag.capacityMl
+
+        : '—';
+
+
+  $('bag-fill-status')
+    .textContent =
+      bag.shortLabel;
+
+
+  $('bag-message')
+    .textContent =
+      bag.message;
+
+
+  $('bag-progress')
+    .style
+    .width =
+      `${Math.min(
+        Math.max(
+          bag.percentage,
+          0
+        ),
+        100
+      )}%`;
+
+
+  $('bag-progress')
+    .classList
+    .toggle(
+
+      'warning',
+
+      [
+
+        'half',
+
+        'three-quarter',
+
+        'nearly-full'
+
+      ]
+      .includes(
+        bag.level
+      )
+
+    );
+
+
+  $('bag-progress')
+    .classList
+    .toggle(
+
+      'danger',
+
+      [
+
+        'full',
+
+        'overflow'
+
+      ]
+      .includes(
+        bag.level
+      )
+
+    );
+
+
+  $('bag-fill-status')
+    .classList
+    .toggle(
+
+      'warning',
+
+      [
+
+        'half',
+
+        'three-quarter',
+
+        'nearly-full'
+
+      ]
+      .includes(
+        bag.level
+      )
+
+    );
+
+
+  $('bag-fill-status')
+    .classList
+    .toggle(
+
+      'danger',
+
+      [
+
+        'full',
+
+        'overflow'
+
+      ]
+      .includes(
+        bag.level
+      )
+
+    );
+
+
+  $('bag-fill-status')
+    .classList
+    .toggle(
+
+      'success',
+
+      bag.level ===
+        'normal'
+
+    );
+
+
+  /*
+    Hourly urine display
+  */
+
+  $('hourly-urine-value')
+    .textContent =
+      asNumber(
+        hourlyRow.urine
+      )
+      .toFixed(
+        1
+      );
+
+
+  $('hourly-range-display')
+    .textContent =
+      `${state.hourlyLimits.minMl}` +
+      `–` +
+      `${state.hourlyLimits.maxMl}`;
+
+
+  $('hourly-status')
+    .textContent =
+      hourly.label;
+
+
+  updateChartLiveStrip();
+
+  updateBagIdentityUi();
+
+  syncSettings();
+
+}
+
+
+/* =====================================
+   SETTINGS
+===================================== */
+
+function syncSettings() {
+
+  $('hourly-min-input')
+    .value =
+      state.hourlyLimits.minMl;
+
+
+  $('hourly-max-input')
+    .value =
+      state.hourlyLimits.maxMl;
+
+
+  updateBagIdentityUi();
+
+}
+
+
+/* =====================================
+   ALERT UI
+===================================== */
+
+function showMainAlert(
+  title,
+  message
+) {
+
+  $('alert-banner')
+    .classList
+    .remove(
+      'hidden'
+    );
+
+
+  $('alert-title')
+    .textContent =
+      title;
+
+
+  $('alert-message')
+    .textContent =
+      message;
+
+}
+
+
+function addNotification(
+  key,
+  title,
+  message,
+  type =
+    'hourly'
+) {
+
+  if (
+    state.notifications
+      .some(
+        notification =>
+          notification.key ===
+          key
+      )
+  ) {
+
+    return false;
+
+  }
+
+
+  state.notifications
+    .unshift({
+
+      key,
+
+      title,
+
+      message,
+
+      type,
+
+      time:
+        new Date()
+
+    });
+
+
+  $('notification-dot')
+    .classList
+    .remove(
+      'hidden'
+    );
+
+
+  renderNotifications();
+
+
+  return true;
+
+}
+
+
+function renderNotifications() {
+
+  const list =
+    $('notification-list');
+
+
+  if (
+    !state.notifications.length
+  ) {
+
+    list.innerHTML = `
+
+      <div class="empty-state">
+
+        <div>
+          🔔
+        </div>
+
+        <strong>
+          No alerts yet
+        </strong>
+
+        <p>
+          Bag-capacity and hourly
+          urine-output alerts will
+          appear here.
+        </p>
+
+      </div>
+
+    `;
+
 
     return;
 
   }
 
 
-  const row =
-    getOrCreateCurrentRow();
+  list.innerHTML =
+    state.notifications
+      .map(
+        notification => `
 
+          <div
+            class="
+              card
+              notification-card
+              ${escapeHtml(notification.type)}
+            "
+          >
 
-  row.urine =
-    Math.round(
+            <strong>
+              ${escapeHtml(notification.title)}
+            </strong>
 
-      (
-        asNumber(
-          row.urine
-        )
-        +
-        delta
+            <p>
+              ${escapeHtml(notification.message)}
+            </p>
+
+            <time>
+              ${
+                new Date(
+                  notification.time
+                )
+                .toLocaleString()
+              }
+            </time>
+
+          </div>
+
+        `
       )
-      *
-      10
-
-    )
-    /
-    10;
-
-
-  saveFluidRows();
+      .join('');
 
 }
 
 
-
-/* ==========================
-   CALCULATIONS
-========================== */
-
+/* =====================================
+   FLUID BALANCE CALCULATIONS
+===================================== */
 
 function calculateFluidRows() {
 
   let runningInput =
     0;
+
 
   let runningOutput =
     0;
@@ -1843,14 +3107,19 @@ function calculateFluidRows() {
   ]
 
   .sort(
+
     (a, b) =>
+
       new Date(
         a.key
       )
+
       -
+
       new Date(
         b.key
       )
+
   )
 
   .map(
@@ -1936,16 +3205,11 @@ function calculateFluidRows() {
 }
 
 
-
-/* ==========================
-   NURSE INPUT CELLS
-========================== */
-
-
 function inputCell(
   row,
   field,
-  className = ''
+  className =
+    ''
 ) {
 
   const value =
@@ -1956,8 +3220,9 @@ function inputCell(
 
 
   const type =
+
     field ===
-      'initials'
+    'initials'
 
       ? 'text'
 
@@ -1967,11 +3232,11 @@ function inputCell(
   const extra =
 
     type ===
-      'number'
+    'number'
 
-      ? ' min="0" step="1" inputmode="decimal"'
+      ? 'min="0" step="1" inputmode="decimal"'
 
-      : ' maxlength="4"';
+      : 'maxlength="4"';
 
 
   return `
@@ -1997,19 +3262,16 @@ function inputCell(
 }
 
 
-
-/* ==========================
-   FORMAT VALUES
-========================== */
-
-
 function formatNumber(
   number
 ) {
 
   const value =
     Math.round(
-      asNumber(number) *
+      asNumber(
+        number
+      )
+      *
       10
     )
     /
@@ -2031,46 +3293,37 @@ function formatNumber(
 }
 
 
-
 function formatBalance(
   number
 ) {
 
   const value =
     Math.round(
-      asNumber(number) *
+      asNumber(
+        number
+      )
+      *
       10
     )
     /
     10;
 
 
-  if (
-    value > 0
-  ) {
+  return value >
+    0
 
-    return (
-      '+' +
-      formatNumber(
+    ? `+${formatNumber(value)}`
+
+    : formatNumber(
         value
-      )
-    );
-
-  }
-
-
-  return formatNumber(
-    value
-  );
+      );
 
 }
 
 
-
-/* ==========================
-   RENDER FLUID CHART
-========================== */
-
+/* =====================================
+   RENDER FLUID BALANCE CHART
+===================================== */
 
 function renderFluidChart() {
 
@@ -2081,23 +3334,23 @@ function renderFluidChart() {
   if (
     !body
   ) {
+
     return;
+
+  }
+
+
+  if (
+    !state.fluidRows.length
+  ) {
+
+    getOrCreateCurrentRow();
+
   }
 
 
   const rows =
     calculateFluidRows();
-
-
-  if (
-    !rows.length
-  ) {
-
-    getOrCreateCurrentRow();
-
-    return renderFluidChart();
-
-  }
 
 
   body.innerHTML =
@@ -2109,11 +3362,7 @@ function renderFluidChart() {
 
             <td class="time-cell">
 
-              ${
-                hourLabel(
-                  row.key
-                )
-              }
+              ${hourLabel(row.key)}
 
             </td>
 
@@ -2216,7 +3465,9 @@ function renderFluidChart() {
                 calc-cell
                 ${
                   row.balance < 0
+
                     ? 'balance-negative'
+
                     : 'balance-positive'
                 }
               "
@@ -2235,9 +3486,13 @@ function renderFluidChart() {
 
               ${
                 inputCell(
+
                   row,
+
                   'initials',
+
                   'initials-input'
+
                 )
               }
 
@@ -2258,72 +3513,87 @@ function renderFluidChart() {
       input => {
 
         input.addEventListener(
+
           'change',
+
           handleFluidInput
+
         );
 
+
         input.addEventListener(
+
           'blur',
+
           handleFluidInput
+
         );
 
       }
     );
 
 
-  const last =
-    rows[
-      rows.length -
-      1
-    ];
+  if (
+    rows.length
+  ) {
+
+    const last =
+      rows[
+        rows.length -
+        1
+      ];
 
 
-  $('summary-input')
-    .textContent =
-      formatNumber(
-        last.runningInput
+    $('summary-input')
+      .textContent =
+        formatNumber(
+          last.runningInput
+        );
+
+
+    $('summary-output')
+      .textContent =
+        formatNumber(
+          last.runningOutput
+        );
+
+
+    $('summary-balance')
+      .textContent =
+        `${formatBalance(
+          last.balance
+        )} mL`;
+
+
+    $('summary-balance')
+      .classList
+      .toggle(
+
+        'balance-negative',
+
+        last.balance <
+        0
+
       );
 
 
-  $('summary-output')
-    .textContent =
-      formatNumber(
-        last.runningOutput
+    $('summary-balance')
+      .classList
+      .toggle(
+
+        'balance-positive',
+
+        last.balance >=
+        0
+
       );
 
-
-  $('summary-balance')
-    .textContent =
-      `${formatBalance(
-        last.balance
-      )} mL`;
-
-
-  $('summary-balance')
-    .classList
-    .toggle(
-      'balance-negative',
-      last.balance < 0
-    );
-
-
-  $('summary-balance')
-    .classList
-    .toggle(
-      'balance-positive',
-      last.balance >= 0
-    );
+  }
 
 
   updateChartLiveStrip();
 
 }
-
-
-
-/* ==========================
-   HANDLE NURSE ENTRY
-========================== */
 
 
 function handleFluidInput(
@@ -2359,7 +3629,7 @@ function handleFluidInput(
   row[field] =
 
     field ===
-      'initials'
+    'initials'
 
       ? element
           .value
@@ -2376,17 +3646,11 @@ function handleFluidInput(
 }
 
 
-
-/* ==========================
-   LIVE CHART STATUS
-========================== */
-
-
 function updateChartLiveStrip() {
 
   if (
     !$(
-      'chart-live-volume'
+      'chart-hourly-volume'
     )
   ) {
 
@@ -2395,11 +3659,18 @@ function updateChartLiveStrip() {
   }
 
 
-  $('chart-live-volume')
+  const row =
+    getCurrentHourRow();
+
+
+  const hourly =
+    getCurrentHourlyStatus();
+
+
+  $('chart-hourly-volume')
     .textContent =
-      Number(
-        state.reading.volume ||
-        0
+      asNumber(
+        row.urine
       )
       .toFixed(
         1
@@ -2411,35 +3682,47 @@ function updateChartLiveStrip() {
       state.liveSource;
 
 
-  $('chart-connection-pill')
+  $('chart-hourly-status')
     .textContent =
-
-      state.liveSource ===
-      'Waiting for live feed'
-
-        ? 'Waiting'
-
-        : 'Live';
+      hourly.label;
 
 
-  $('chart-connection-pill')
+  $('chart-hourly-status')
     .classList
     .toggle(
 
       'success',
 
-      state.liveSource !==
-      'Waiting for live feed'
+      hourly.level ===
+      'success'
+
+    );
+
+
+  $('chart-hourly-status')
+    .classList
+    .toggle(
+
+      'warning',
+
+      hourly.level ===
+      'warning'
+
+    );
+
+
+  $('chart-hourly-status')
+    .classList
+    .toggle(
+
+      'danger',
+
+      hourly.level ===
+      'danger'
 
     );
 
 }
-
-
-
-/* ==========================
-   ADD CURRENT HOUR
-========================== */
 
 
 function addCurrentHourRow() {
@@ -2448,6 +3731,7 @@ function addCurrentHourRow() {
 
   renderFluidChart();
 
+
   toast(
     'Current hour added'
   );
@@ -2455,11 +3739,9 @@ function addCurrentHourRow() {
 }
 
 
-
-/* ==========================
+/* =====================================
    CSV EXPORT
-========================== */
-
+===================================== */
 
 function exportFluidCsv() {
 
@@ -2467,38 +3749,42 @@ function exportFluidCsv() {
     calculateFluidRows();
 
 
-  const header = [
+  const header =
+    [
 
-    'Time',
+      'Time',
 
-    'Oral_mL',
+      'Oral_mL',
 
-    'IV_Fluids_mL',
+      'IV_Fluids_mL',
 
-    'IV_Meds_mL',
+      'IV_Meds_mL',
 
-    'Running_Input_mL',
+      'Running_Input_mL',
 
-    'Urine_Auto_mL',
+      'Urine_Auto_mL',
 
-    'Drain_mL',
+      'Drain_mL',
 
-    'Vomit_mL',
+      'Vomit_mL',
 
-    'Running_Output_mL',
+      'Running_Output_mL',
 
-    'Cumulative_Balance_mL',
+      'Cumulative_Balance_mL',
 
-    'RN_Initials'
+      'RN_Initials'
 
-  ];
+    ];
 
 
-  const lines = [
+  const lines =
+    [
 
-    header.join(',')
+      header.join(
+        ','
+      )
 
-  ];
+    ];
 
 
   rows.forEach(
@@ -2557,7 +3843,6 @@ function exportFluidCsv() {
       );
 
     }
-
   );
 
 
@@ -2571,8 +3856,10 @@ function exportFluidCsv() {
       ],
 
       {
+
         type:
           'text/csv;charset=utf-8'
+
       }
 
     );
@@ -2595,14 +3882,9 @@ function exportFluidCsv() {
 
 
   link.download =
-    `fluid-balance-P-0001-${
-      new Date()
-        .toISOString()
-        .slice(
-          0,
-          10
-        )
-    }.csv`;
+    `fluid-balance-` +
+    `${state.bag.patientId || 'patient'}-` +
+    `${new Date().toISOString().slice(0,10)}.csv`;
 
 
   document.body
@@ -2628,11 +3910,9 @@ function exportFluidCsv() {
 }
 
 
-
-/* ==========================
-   RESET SESSION
-========================== */
-
+/* =====================================
+   RESET FLUID SESSION
+===================================== */
 
 function resetFluidSession() {
 
@@ -2670,6 +3950,8 @@ function resetFluidSession() {
 
   renderFluidChart();
 
+  updateDashboard();
+
 
   toast(
     'New fluid-balance session started'
@@ -2678,36 +3960,20 @@ function resetFluidSession() {
 }
 
 
-
-/* ==========================
+/* =====================================
    SENSOR LOGGER BRIDGE
-========================== */
-
-
-/*
-  The Sensor Logger is normally:
-
-  http://127.0.0.1:5000
-
-  The GitHub application is:
-
-  https://sangeetabhattacharya.github.io/Project/
-
-  postMessage allows the local
-  logger to send readings to
-  the GitHub page.
-*/
-
+===================================== */
 
 const TRUSTED_LOGGER_ORIGINS =
-  new Set([
+  new Set(
+    [
 
-    'http://127.0.0.1:5000',
+      'http://127.0.0.1:5000',
 
-    'http://localhost:5000'
+      'http://localhost:5000'
 
-  ]);
-
+    ]
+  );
 
 
 function handleBridgePayload(
@@ -2724,7 +3990,10 @@ function handleBridgePayload(
 
 
   if (
-    payload.type &&
+    payload.type
+
+    &&
+
     payload.type !==
       'nesso-reading'
   ) {
@@ -2750,7 +4019,6 @@ function handleBridgePayload(
 }
 
 
-
 window.addEventListener(
 
   'message',
@@ -2760,7 +4028,7 @@ window.addEventListener(
     const trusted =
 
       event.origin ===
-      window.location.origin
+        window.location.origin
 
       ||
 
@@ -2788,11 +4056,9 @@ window.addEventListener(
 );
 
 
-
-/* ==========================
+/* =====================================
    EVENT LISTENERS
-========================== */
-
+===================================== */
 
 $('login-form')
   .addEventListener(
@@ -2825,8 +4091,7 @@ $('demo-scan')
 
     'click',
 
-    () =>
-      completeDemoScan()
+    completeDemoScan
 
   );
 
@@ -2902,7 +4167,6 @@ document
     '[data-go]'
   )
   .forEach(
-
     button => {
 
       button.addEventListener(
@@ -2917,73 +4181,12 @@ document
       );
 
     }
-
   );
 
 
-$('threshold-input')
-  .addEventListener(
+/* SAVE HOURLY THRESHOLDS */
 
-    'input',
-
-    event => {
-
-      const value =
-        Number(
-          event.target.value
-        );
-
-
-      if (
-        Number.isFinite(
-          value
-        )
-      ) {
-
-        $('threshold-preview')
-          .textContent =
-            value;
-
-
-        $('threshold-range')
-          .value =
-            Math.min(
-              1000,
-              Math.max(
-                50,
-                value
-              )
-            );
-
-      }
-
-    }
-
-  );
-
-
-$('threshold-range')
-  .addEventListener(
-
-    'input',
-
-    event => {
-
-      $('threshold-input')
-        .value =
-          event.target.value;
-
-
-      $('threshold-preview')
-        .textContent =
-          event.target.value;
-
-    }
-
-  );
-
-
-$('threshold-form')
+$('hourly-threshold-form')
   .addEventListener(
 
     'submit',
@@ -2993,14 +4196,123 @@ $('threshold-form')
       event.preventDefault();
 
 
-      saveThreshold(
-        $('threshold-input')
-          .value
+      if (
+        saveHourlyThresholds(
+
+          $('hourly-min-input')
+            .value,
+
+          $('hourly-max-input')
+            .value
+
+        )
+      ) {
+
+        showView(
+          'dashboard'
+        );
+
+      }
+
+    }
+
+  );
+
+
+/*
+  DEMONSTRATION BUTTON:
+
+  Allows the low-output alert
+  to be shown without waiting
+  until the current hour ends.
+*/
+
+$('evaluate-hour-now')
+  .addEventListener(
+
+    'click',
+
+    () => {
+
+      const row =
+        getCurrentHourRow();
+
+
+      row.sensorSeen =
+        true;
+
+
+      saveFluidRows();
+
+
+      const notificationsBefore =
+        state.notifications.length;
+
+
+      evaluateHourlyUrine(
+
+        row,
+
+        true
+
       );
 
 
-      showView(
-        'dashboard'
+      /*
+        If neither high nor low,
+        show that the value is
+        within the configured range.
+      */
+
+      if (
+        state.notifications.length ===
+        notificationsBefore
+      ) {
+
+        const urine =
+          asNumber(
+            row.urine
+          );
+
+
+        const min =
+          state.hourlyLimits.minMl;
+
+
+        const max =
+          state.hourlyLimits.maxMl;
+
+
+        if (
+          urine >= min
+
+          &&
+
+          urine <= max
+        ) {
+
+          showMainAlert(
+
+            'Hourly urine within configured range',
+
+            `${urine.toFixed(1)} mL ` +
+            `is within the configured ` +
+            `${min}–${max} mL/hour range.`
+
+          );
+
+        }
+
+      }
+
+
+      updateDashboard();
+
+      renderFluidChart();
+
+
+      toast(
+        'Current hour evaluated'
       );
 
     }
@@ -3038,16 +4350,31 @@ $('reset-fluid-session')
   );
 
 
+/*
+  Re-check completed hours
+  even if no additional urine
+  reading has arrived.
+*/
 
-/* ==========================
+setInterval(
+
+  evaluateCompletedHours,
+
+  60000
+
+);
+
+
+/* =====================================
    START APPLICATION
-========================== */
-
-
-syncThresholdInputs();
-
-updateDashboard();
+===================================== */
 
 getOrCreateCurrentRow();
+
+updateBagIdentityUi();
+
+syncSettings();
+
+updateDashboard();
 
 renderFluidChart();
