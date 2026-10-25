@@ -70,6 +70,11 @@
       color: white;
     }
 
+    .mobile {
+      background: #0b5f6d;
+      color: white;
+    }
+
     .status {
       font-weight: bold;
     }
@@ -107,6 +112,11 @@
       color: #c33;
     }
 
+    .bridge-ok {
+      color: #0a7;
+      font-weight: 700;
+    }
+
     .last-line {
       font-family: Consolas, monospace;
       background: #f0f0f0;
@@ -117,55 +127,159 @@
 </head>
 
 <body>
+
   <h1>Nesso N1 Sensor Logger</h1>
 
   <div class="card">
+
     <form class="row" method="post" action="/start">
+
       <div>
         <label for="port">Serial port</label>
-        <input id="port" name="port" value="COM3">
+        <input
+          id="port"
+          name="port"
+          value="COM3"
+        >
       </div>
 
       <div>
         <label for="baud">Baud rate</label>
-        <input id="baud" name="baud" value="115200">
+        <input
+          id="baud"
+          name="baud"
+          value="115200"
+        >
       </div>
 
-      <button class="start" type="submit">Start logging</button>
+      <button
+        class="start"
+        type="submit"
+      >
+        Start logging
+      </button>
+
     </form>
 
-    <form method="post" action="/stop" style="display:inline-block; margin-top: 12px;">
-      <button class="stop" type="submit">Stop logging</button>
+    <form
+      method="post"
+      action="/stop"
+      style="display:inline-block; margin-top:12px;"
+    >
+      <button
+        class="stop"
+        type="submit"
+      >
+        Stop logging
+      </button>
     </form>
 
-    <a class="button export" href="/export">Download CSV</a>
+    <a
+      class="button export"
+      href="/export"
+    >
+      Download CSV
+    </a>
 
-    <form method="post" action="/clear" style="display:inline-block;" onsubmit="return confirm('Clear all saved readings?');">
-      <button class="clear" type="submit">Clear table</button>
+    <form
+      method="post"
+      action="/clear"
+      style="display:inline-block;"
+      onsubmit="return confirm('Clear all saved readings?');"
+    >
+      <button
+        class="clear"
+        type="submit"
+      >
+        Clear table
+      </button>
     </form>
-  </div>
 
-  <div class="card">
-    <p>Status: <span id="running" class="status">Loading...</span></p>
+    <button
+      class="mobile"
+      type="button"
+      id="openMobileApp"
+    >
+      Open Fluid Balance App
+    </button>
 
-    <p class="muted">
-      Port: <span id="portText"></span> |
-      Baud: <span id="baudText"></span> |
-      Started: <span id="startedAt"></span>
+    <p
+      class="muted"
+      style="margin-bottom:0;"
+    >
+      Keep this logger tab open.
+      It will send each newest Nesso reading
+      to the mobile fluid balance application.
     </p>
 
-    <p>Last line received:</p>
-    <div id="lastLine" class="last-line">Waiting...</div>
-
-    <p id="lastError" class="error"></p>
   </div>
 
   <div class="card">
-    <h2>Saved readings</h2>
+
+    <p>
+      Status:
+      <span
+        id="running"
+        class="status"
+      >
+        Loading...
+      </span>
+    </p>
+
+    <p class="muted">
+
+      Port:
+      <span id="portText"></span>
+
+      |
+
+      Baud:
+      <span id="baudText"></span>
+
+      |
+
+      Started:
+      <span id="startedAt"></span>
+
+    </p>
+
+    <p>
+      Mobile app bridge:
+      <span id="bridgeStatus">
+        Not opened
+      </span>
+    </p>
+
+    <p>
+      Last line received:
+    </p>
+
+    <div
+      id="lastLine"
+      class="last-line"
+    >
+      Waiting...
+    </div>
+
+    <p
+      id="lastError"
+      class="error"
+    ></p>
+
+  </div>
+
+  <div class="card">
+
+    <h2>
+      Saved readings
+    </h2>
 
     <div class="table-wrap">
+
       <table>
+
         <thead>
+
           <tr>
             <th>ID</th>
             <th>Received at</th>
@@ -177,73 +291,384 @@
             <th>Vin</th>
             <th>Status</th>
           </tr>
+
         </thead>
 
-        <tbody id="readingsBody"></tbody>
+        <tbody id="readingsBody">
+        </tbody>
+
       </table>
+
     </div>
+
   </div>
 
   <script>
+
+    const MOBILE_APP_URL =
+      'https://sangeetabhattacharya.github.io/Project/';
+
+    const MOBILE_APP_ORIGIN =
+      'https://sangeetabhattacharya.github.io';
+
+
+    let mobileAppWindow = null;
+
+    let lastSentReadingId = null;
+
+
+    function openMobileApp() {
+
+      mobileAppWindow = window.open(
+        MOBILE_APP_URL,
+        'smartUrineMobileApp'
+      );
+
+      const bridgeStatus =
+        document.getElementById('bridgeStatus');
+
+
+      if (mobileAppWindow) {
+
+        bridgeStatus.textContent =
+          'Mobile app opened — sending live readings';
+
+        bridgeStatus.className =
+          'bridge-ok';
+
+      } else {
+
+        bridgeStatus.textContent =
+          'Popup blocked — allow popups and try again';
+
+        bridgeStatus.className =
+          'error';
+
+      }
+
+    }
+
+
+    function sendReadingToMobileApp(reading) {
+
+      if (
+        !mobileAppWindow ||
+        mobileAppWindow.closed ||
+        !reading
+      ) {
+        return;
+      }
+
+
+      const payload = {
+
+        type: 'nesso-reading',
+
+        source:
+          'Nesso N1 Sensor Logger',
+
+        timestamp:
+          Date.now(),
+
+        reading: {
+
+          volume_ml:
+            Number(
+              reading.volume_ml ?? 0
+            ),
+
+          pulses:
+            Number(
+              reading.pulses ?? 0
+            ),
+
+          turbidity_raw:
+            Number(
+              reading.turbidity_raw ?? 0
+            ),
+
+          vout:
+            Number(
+              reading.vout ?? 0
+            ),
+
+          vin:
+            Number(
+              reading.vin ?? 0
+            ),
+
+          status:
+            String(
+              reading.status ?? 'UNKNOWN'
+            )
+
+        }
+
+      };
+
+
+      mobileAppWindow.postMessage(
+        payload,
+        MOBILE_APP_ORIGIN
+      );
+
+
+      const bridgeStatus =
+        document.getElementById(
+          'bridgeStatus'
+        );
+
+
+      bridgeStatus.textContent =
+        `Live — last sent ${
+          payload.reading.volume_ml.toFixed(1)
+        } mL`;
+
+
+      bridgeStatus.className =
+        'bridge-ok';
+
+    }
+
+
+    function getNewestReading(readings) {
+
+      if (
+        !Array.isArray(readings) ||
+        readings.length === 0
+      ) {
+        return null;
+      }
+
+
+      return readings.reduce(
+        (latest, current) => {
+
+          const latestId =
+            Number(
+              latest?.id ?? -1
+            );
+
+          const currentId =
+            Number(
+              current?.id ?? -1
+            );
+
+          return currentId > latestId
+            ? current
+            : latest;
+
+        },
+        readings[0]
+      );
+
+    }
+
+
     async function loadStatus() {
-      const response = await fetch('/api/status');
-      const status = await response.json();
 
-      document.getElementById('running').textContent =
-        status.running ? 'Logging' : 'Stopped';
+      const response =
+        await fetch(
+          '/api/status'
+        );
 
-      document.getElementById('running').style.color =
-        status.running ? '#0a7' : '#c33';
+      const status =
+        await response.json();
 
-      document.getElementById('portText').textContent =
+
+      document.getElementById(
+        'running'
+      ).textContent =
+        status.running
+          ? 'Logging'
+          : 'Stopped';
+
+
+      document.getElementById(
+        'running'
+      ).style.color =
+        status.running
+          ? '#0a7'
+          : '#c33';
+
+
+      document.getElementById(
+        'portText'
+      ).textContent =
         status.port || '-';
 
-      document.getElementById('baudText').textContent =
+
+      document.getElementById(
+        'baudText'
+      ).textContent =
         status.baud || '-';
 
-      document.getElementById('startedAt').textContent =
+
+      document.getElementById(
+        'startedAt'
+      ).textContent =
         status.started_at || '-';
 
-      document.getElementById('lastLine').textContent =
-        status.last_line || 'No line received yet';
 
-      document.getElementById('lastError').textContent =
-        status.last_error ? 'Error: ' + status.last_error : '';
+      document.getElementById(
+        'lastLine'
+      ).textContent =
+        status.last_line ||
+        'No line received yet';
+
+
+      document.getElementById(
+        'lastError'
+      ).textContent =
+        status.last_error
+          ? 'Error: ' +
+            status.last_error
+          : '';
+
     }
+
 
     async function loadReadings() {
-      const response = await fetch('/api/readings?limit=100');
-      const readings = await response.json();
 
-      const body = document.getElementById('readingsBody');
+      const response =
+        await fetch(
+          '/api/readings?limit=100'
+        );
+
+
+      const readings =
+        await response.json();
+
+
+      const body =
+        document.getElementById(
+          'readingsBody'
+        );
+
+
       body.innerHTML = '';
 
+
       for (const r of readings) {
-        const tr = document.createElement('tr');
+
+        const tr =
+          document.createElement(
+            'tr'
+          );
+
 
         tr.innerHTML = `
-          <td>${r.id ?? ''}</td>
-          <td>${r.received_at ?? ''}</td>
-          <td>${r.device_time_ms ?? ''}</td>
-          <td>${r.volume_ml ?? ''}</td>
-          <td>${r.pulses ?? ''}</td>
-          <td>${r.turbidity_raw ?? ''}</td>
-          <td>${r.vout ?? ''}</td>
-          <td>${r.vin ?? ''}</td>
-          <td>${r.status ?? ''}</td>
+
+          <td>
+            ${r.id ?? ''}
+          </td>
+
+          <td>
+            ${r.received_at ?? ''}
+          </td>
+
+          <td>
+            ${r.device_time_ms ?? ''}
+          </td>
+
+          <td>
+            ${r.volume_ml ?? ''}
+          </td>
+
+          <td>
+            ${r.pulses ?? ''}
+          </td>
+
+          <td>
+            ${r.turbidity_raw ?? ''}
+          </td>
+
+          <td>
+            ${r.vout ?? ''}
+          </td>
+
+          <td>
+            ${r.vin ?? ''}
+          </td>
+
+          <td>
+            ${r.status ?? ''}
+          </td>
+
         `;
 
+
         body.appendChild(tr);
+
       }
+
+
+      const newest =
+        getNewestReading(
+          readings
+        );
+
+
+      if (
+        newest &&
+        newest.id !==
+          lastSentReadingId
+      ) {
+
+        lastSentReadingId =
+          newest.id;
+
+
+        sendReadingToMobileApp(
+          newest
+        );
+
+      }
+
     }
+
 
     async function refresh() {
-      await loadStatus();
-      await loadReadings();
+
+      try {
+
+        await loadStatus();
+
+        await loadReadings();
+
+      } catch (error) {
+
+        document.getElementById(
+          'lastError'
+        ).textContent =
+          'Refresh error: ' +
+          (
+            error.message ||
+            error
+          );
+
+      }
+
     }
 
+
+    document.getElementById(
+      'openMobileApp'
+    ).addEventListener(
+      'click',
+      openMobileApp
+    );
+
+
     refresh();
-    setInterval(refresh, 2000);
+
+
+    setInterval(
+      refresh,
+      2000
+    );
+
   </script>
+
 </body>
 </html>
