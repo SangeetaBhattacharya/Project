@@ -9,29 +9,23 @@
   --primary-soft: #e4f1f3;
   --success: #16794a;
   --success-soft: #e6f4ed;
+  --warning: #a86a00;
+  --warning-soft: #fff5d8;
   --danger: #b52b35;
   --danger-soft: #fff0f1;
-
-  --shadow:
-    0 18px 50px
-    rgba(20, 55, 63, 0.14);
+  --shadow: 0 18px 50px rgba(20,55,63,.14);
 }
-
 
 * {
   box-sizing: border-box;
 }
 
-
 html {
   background: #dce8ea;
 }
 
-
 body {
-
   margin: 0;
-
   min-height: 100vh;
 
   font-family:
@@ -42,8 +36,7 @@ body {
     "Segoe UI",
     sans-serif;
 
-  color:
-    var(--ink);
+  color: var(--ink);
 
   background:
     radial-gradient(
@@ -52,23 +45,18 @@ body {
       #dfeaec 68%,
       #d3e1e3 100%
     );
-
 }
-
 
 button,
 input {
   font: inherit;
 }
 
-
 button {
   cursor: pointer;
 }
 
-
 .app-shell {
-
   position: relative;
 
   width:
@@ -85,9 +73,7 @@ button {
 
   overflow-x:
     hidden;
-
 }
-
 
 @media (min-width: 700px) {
 
@@ -97,7 +83,8 @@ button {
 
   .app-shell {
 
-    min-height: 850px;
+    min-height:
+      850px;
 
     height:
       min(
@@ -118,16 +105,19 @@ button {
 
 }
 
-
 .prototype-ribbon {
 
-  position: absolute;
+  position:
+    absolute;
 
-  z-index: 30;
+  z-index:
+    30;
 
-  right: -42px;
+  right:
+    -42px;
 
-  top: 27px;
+  top:
+    27px;
 
   transform:
     rotate(36deg);
@@ -152,17 +142,14 @@ button {
 
 }
 
-
 .screen {
   display: none;
   min-height: 100vh;
 }
 
-
 .screen.active {
   display: block;
 }
-
 
 .auth-screen {
 
@@ -179,35 +166,40 @@ button {
 
 }
 
-
 .brand-block {
   margin-bottom: 38px;
 }
 
-
 .brand-mark {
 
-  width: 54px;
+  width:
+    54px;
 
-  height: 54px;
+  height:
+    54px;
 
-  border-radius: 17px;
+  border-radius:
+    17px;
 
-  display: grid;
+  display:
+    grid;
 
-  place-items: center;
+  place-items:
+    center;
 
   background:
     var(--primary);
 
-  color: white;
+  color:
+    white;
 
-  font-size: 24px;
+  font-size:
+    24px;
 
-  margin-bottom: 19px;
+  margin-bottom:
+    19px;
 
 }
-
 
 .eyebrow {
 
@@ -221,13 +213,12 @@ button {
     800;
 
   letter-spacing:
-    0.12em;
+    .12em;
 
   color:
     var(--primary-2);
 
 }
-
 
 h1,
 h2,
@@ -237,35 +228,29 @@ p {
   margin-top: 0;
 }
 
-
 h1 {
   font-size: 32px;
 }
-
 
 h2 {
   font-size: 21px;
   margin: 0;
 }
 
-
 h3 {
   font-size: 20px;
   margin-bottom: 7px;
 }
 
-
 h4 {
   font-size: 16px;
 }
-
 
 .muted,
 .section-intro p,
 .helper {
   color: var(--muted);
 }
-
 
 .card {
 
@@ -278,7 +263,7 @@ h4 {
       208,
       225,
       228,
-      0.92
+      .92
     );
 
   border-radius:
@@ -290,20 +275,19 @@ h4 {
       35,
       75,
       84,
-      0.06
+      .06
     );
 
 }
-
 
 .form-card {
   padding: 20px;
 }
 
-
 label {
 
-  display: block;
+  display:
+    block;
 
   font-size:
     13px;
@@ -316,12 +300,12 @@ label {
 
 }
 
-
 input[type="email"],
 input[type="password"],
 input[type="number"] {
 
-  width: 100%;
+  width:
+    100%;
 
   margin-top:
     7px;
@@ -343,7 +327,6 @@ input[type="number"] {
 
 }
 
-
 input:focus {
 
   border-color:
@@ -354,12 +337,13 @@ input:focus {
 
 }
 
-
 .btn {
 
-  width: 100%;
+  width:
+    100%;
 
-  border: 0;
+  border:
+    0;
 
   border-radius:
     13px;
@@ -375,7 +359,6 @@ input:focus {
 
 }
 
-
 .btn.primary {
 
   background:
@@ -385,7 +368,6 @@ input:focus {
     white;
 
 }
-
 
 .btn.secondary {
 
@@ -400,7 +382,6 @@ input:focus {
 
 }
 
-
 .btn.ghost {
 
   background:
@@ -414,28 +395,32 @@ input:focus {
 
 }
 
-
 .btn.compact {
 
-  margin-top: 0;
+  margin-top:
+    0;
 
-  padding: 10px;
+  padding:
+    10px;
 
-  font-size: 12px;
+  font-size:
+    12px;
 
 }
 
-
 .text-btn {
 
-  display: block;
+  display:
+    block;
 
   margin:
     13px auto 0;
 
-  background: none;
+  background:
+    none;
 
-  border: 0;
+  border:
+    0;
 
   color:
     var(--primary);
@@ -444,7 +429,6 @@ input:focus {
     700;
 
 }
-
 
 .clinical-note {
 
@@ -465,22 +449,23 @@ input:focus {
 
 }
 
-
 #app-screen {
   padding-bottom: 92px;
 }
-
 
 .topbar {
 
   position:
     sticky;
 
-  top: 0;
+  top:
+    0;
 
-  z-index: 20;
+  z-index:
+    20;
 
-  display: flex;
+  display:
+    flex;
 
   align-items:
     center;
@@ -496,14 +481,13 @@ input:focus {
       237,
       244,
       245,
-      0.94
+      .94
     );
 
   border-bottom:
     1px solid #cddde0;
 
 }
-
 
 .icon-button {
 
@@ -526,7 +510,6 @@ input:focus {
     13px;
 
 }
-
 
 .notification-dot {
 
@@ -553,31 +536,27 @@ input:focus {
 
 }
 
-
 .hidden {
   display: none !important;
 }
 
-
 .view {
 
-  display: none;
+  display:
+    none;
 
   padding:
     20px 18px 26px;
 
 }
 
-
 .view.active {
   display: block;
 }
 
-
 .section-intro {
   margin-bottom: 18px;
 }
-
 
 .section-intro p {
 
@@ -588,7 +567,6 @@ input:focus {
     1.5;
 
 }
-
 
 .camera-card {
 
@@ -612,7 +590,6 @@ input:focus {
 
 }
 
-
 #camera {
 
   width:
@@ -629,11 +606,9 @@ input:focus {
 
 }
 
-
 .camera-card.camera-on #camera {
   display: block;
 }
-
 
 .camera-placeholder {
 
@@ -666,11 +641,7 @@ input:focus {
 
 }
 
-
 .scan-frame {
-
-  position:
-    relative;
 
   width:
     190px;
@@ -686,7 +657,6 @@ input:focus {
 
 }
 
-
 .status-line {
 
   font-size:
@@ -699,7 +669,6 @@ input:focus {
     12px 3px 2px;
 
 }
-
 
 .link-card {
 
@@ -720,7 +689,6 @@ input:focus {
 
 }
 
-
 .link-card code {
 
   display:
@@ -729,8 +697,13 @@ input:focus {
   margin-top:
     7px;
 
-}
+  white-space:
+    normal;
 
+  word-break:
+    break-word;
+
+}
 
 .patient-hero {
 
@@ -753,7 +726,6 @@ input:focus {
     14px;
 
 }
-
 
 .avatar {
 
@@ -783,7 +755,6 @@ input:focus {
 
 }
 
-
 .pill {
 
   display:
@@ -809,7 +780,6 @@ input:focus {
 
 }
 
-
 .pill.success {
 
   background:
@@ -820,6 +790,15 @@ input:focus {
 
 }
 
+.pill.warning {
+
+  background:
+    var(--warning-soft);
+
+  color:
+    var(--warning);
+
+}
 
 .pill.danger {
 
@@ -831,17 +810,17 @@ input:focus {
 
 }
 
-
-.details-list {
+.details-list,
+.settings-card {
 
   padding:
     5px 15px;
 
-  margin-bottom:
-    14px;
-
 }
 
+.details-list {
+  margin-bottom: 14px;
+}
 
 .details-list > div,
 .settings-card > div {
@@ -866,7 +845,6 @@ input:focus {
 
 }
 
-
 .dashboard-head {
 
   display:
@@ -883,11 +861,9 @@ input:focus {
 
 }
 
-
 .metric-card {
   padding: 18px;
 }
-
 
 .metric-topline {
 
@@ -903,8 +879,10 @@ input:focus {
   font-size:
     13px;
 
-}
+  gap:
+    10px;
 
+}
 
 .big-number {
 
@@ -919,7 +897,6 @@ input:focus {
 
 }
 
-
 .big-number small {
 
   font-size:
@@ -932,7 +909,6 @@ input:focus {
     var(--muted);
 
 }
-
 
 .progress-track {
 
@@ -950,7 +926,6 @@ input:focus {
 
 }
 
-
 .progress-fill {
 
   height:
@@ -964,12 +939,13 @@ input:focus {
 
 }
 
-
-.progress-fill.danger {
-  background:
-    var(--danger);
+.progress-fill.warning {
+  background: #d08b13;
 }
 
+.progress-fill.danger {
+  background: var(--danger);
+}
 
 .progress-caption {
 
@@ -987,7 +963,6 @@ input:focus {
 
 }
 
-
 .metric-grid {
 
   display:
@@ -1004,11 +979,9 @@ input:focus {
 
 }
 
-
 .mini-metric {
   padding: 15px;
 }
-
 
 .mini-metric span,
 .mini-metric small {
@@ -1024,7 +997,6 @@ input:focus {
 
 }
 
-
 .mini-metric strong {
 
   display:
@@ -1038,7 +1010,6 @@ input:focus {
 
 }
 
-
 .source-card {
 
   margin-top:
@@ -1049,7 +1020,6 @@ input:focus {
 
 }
 
-
 .source-header {
 
   display:
@@ -1058,8 +1028,10 @@ input:focus {
   justify-content:
     space-between;
 
-}
+  gap:
+    12px;
 
+}
 
 .sensor-row {
 
@@ -1080,7 +1052,6 @@ input:focus {
 
 }
 
-
 .button-row {
 
   display:
@@ -1097,20 +1068,18 @@ input:focus {
 
 }
 
-
 .helper {
 
   font-size:
     10px;
 
   line-height:
-    1.4;
+    1.45;
 
   margin:
     9px 0 0;
 
 }
-
 
 .threshold-callout {
 
@@ -1123,6 +1092,9 @@ input:focus {
   align-items:
     center;
 
+  gap:
+    12px;
+
   margin-top:
     11px;
 
@@ -1130,7 +1102,6 @@ input:focus {
     15px;
 
 }
-
 
 .small-btn {
 
@@ -1156,7 +1127,6 @@ input:focus {
     800;
 
 }
-
 
 .alert-banner {
 
@@ -1186,7 +1156,6 @@ input:focus {
 
 }
 
-
 .alert-icon {
 
   width:
@@ -1215,7 +1184,6 @@ input:focus {
 
 }
 
-
 .notification-list {
 
   display:
@@ -1225,7 +1193,6 @@ input:focus {
     11px;
 
 }
-
 
 .notification-card {
 
@@ -1237,6 +1204,13 @@ input:focus {
 
 }
 
+.notification-card.bag {
+  border-left-color: #d08b13;
+}
+
+.notification-card.hourly {
+  border-left-color: var(--danger);
+}
 
 .empty-state {
 
@@ -1257,41 +1231,13 @@ input:focus {
 
 }
 
-
-#threshold-range {
-  width: 100%;
-  accent-color:
-    var(--primary);
+.threshold-form {
+  margin-top: 12px;
 }
-
-
-.range-labels {
-
-  display:
-    flex;
-
-  justify-content:
-    space-between;
-
-  font-size:
-    10px;
-
-  color:
-    var(--muted);
-
-}
-
 
 .settings-card {
-
-  margin-top:
-    12px;
-
-  padding:
-    5px 15px;
-
+  margin-top: 12px;
 }
-
 
 .bottom-nav {
 
@@ -1311,13 +1257,13 @@ input:focus {
     translateX(-50%);
 
   width:
-    min(100%, 430px);
+    min(100%,430px);
 
   display:
     grid;
 
   grid-template-columns:
-    repeat(6, 1fr);
+    repeat(6,1fr);
 
   min-height:
     75px;
@@ -1330,14 +1276,13 @@ input:focus {
       255,
       255,
       255,
-      0.97
+      .97
     );
 
   border-top:
     1px solid #d4e1e3;
 
 }
-
 
 .nav-item {
 
@@ -1370,12 +1315,9 @@ input:focus {
 
 }
 
-
 .nav-item span {
-  font-size:
-    20px;
+  font-size: 20px;
 }
-
 
 .nav-item small {
 
@@ -1387,7 +1329,6 @@ input:focus {
 
 }
 
-
 .nav-item.active {
 
   color:
@@ -1397,7 +1338,6 @@ input:focus {
     #edf7f8;
 
 }
-
 
 .toast {
 
@@ -1435,10 +1375,9 @@ input:focus {
     white;
 
   transition:
-    0.25s;
+    .25s;
 
 }
-
 
 .toast.show {
 
@@ -1451,10 +1390,7 @@ input:focus {
 }
 
 
-/* -------------------------
-   FLUID BALANCE TABLE
--------------------------- */
-
+/* FLUID BALANCE TABLE */
 
 .live-strip {
 
@@ -1478,7 +1414,6 @@ input:focus {
 
 }
 
-
 .live-strip strong {
 
   display:
@@ -1488,7 +1423,6 @@ input:focus {
     14px;
 
 }
-
 
 .live-strip small {
 
@@ -1506,7 +1440,6 @@ input:focus {
 
 }
 
-
 .chart-actions {
 
   display:
@@ -1523,7 +1456,6 @@ input:focus {
 
 }
 
-
 .fluid-table-wrap {
 
   overflow-x:
@@ -1532,8 +1464,10 @@ input:focus {
   border-radius:
     16px;
 
-}
+  -webkit-overflow-scrolling:
+    touch;
 
+}
 
 .fluid-table {
 
@@ -1554,7 +1488,6 @@ input:focus {
 
 }
 
-
 .fluid-table th,
 .fluid-table td {
 
@@ -1572,7 +1505,6 @@ input:focus {
 
 }
 
-
 .fluid-table thead th {
 
   background:
@@ -1586,7 +1518,6 @@ input:focus {
 
 }
 
-
 .fluid-table .group-head th {
 
   background:
@@ -1597,7 +1528,6 @@ input:focus {
 
 }
 
-
 .fluid-table .auto-head {
 
   background:
@@ -1607,7 +1537,6 @@ input:focus {
     var(--success);
 
 }
-
 
 .fluid-table input {
 
@@ -1631,7 +1560,6 @@ input:focus {
 
 }
 
-
 .fluid-table input.initials-input {
 
   width:
@@ -1641,7 +1569,6 @@ input:focus {
     uppercase;
 
 }
-
 
 .fluid-table .auto-urine {
 
@@ -1659,7 +1586,6 @@ input:focus {
 
 }
 
-
 .fluid-table .calc-cell {
 
   background:
@@ -1670,18 +1596,13 @@ input:focus {
 
 }
 
-
 .balance-positive {
-  color:
-    var(--success);
+  color: var(--success);
 }
-
 
 .balance-negative {
-  color:
-    var(--danger);
+  color: var(--danger);
 }
-
 
 .time-cell {
 
@@ -1692,7 +1613,6 @@ input:focus {
     nowrap;
 
 }
-
 
 .table-hint {
 
@@ -1710,7 +1630,6 @@ input:focus {
 
 }
 
-
 .balance-summary {
 
   padding:
@@ -1720,7 +1639,6 @@ input:focus {
     10px;
 
 }
-
 
 .balance-summary > div {
 
@@ -1738,33 +1656,5 @@ input:focus {
 
   font-size:
     12px;
-
-}
-
-
-.chart-note {
-
-  margin-top:
-    10px;
-
-  padding:
-    14px 15px;
-
-}
-
-
-.chart-note p {
-
-  margin:
-    5px 0 0;
-
-  color:
-    var(--muted);
-
-  font-size:
-    10px;
-
-  line-height:
-    1.5;
 
 }
