@@ -18,16 +18,11 @@
 
   <!-- LOGIN -->
 
-  <section
-    id="login-screen"
-    class="screen active auth-screen"
-  >
+  <section id="login-screen" class="screen active auth-screen">
 
     <div class="brand-block">
 
-      <div class="brand-mark">
-        ◉
-      </div>
+      <div class="brand-mark">◉</div>
 
       <p class="eyebrow">
         SMART URINE MONITORING
@@ -43,11 +38,7 @@
 
     </div>
 
-
-    <form
-      id="login-form"
-      class="card form-card"
-    >
+    <form id="login-form" class="card form-card">
 
       <label>
         Work email
@@ -60,7 +51,6 @@
         >
       </label>
 
-
       <label>
         Password
 
@@ -72,25 +62,15 @@
         >
       </label>
 
-
-      <button
-        class="btn primary"
-        type="submit"
-      >
+      <button class="btn primary" type="submit">
         Sign in
       </button>
 
-
-      <button
-        class="text-btn"
-        type="button"
-        id="demo-login"
-      >
+      <button class="text-btn" type="button" id="demo-login">
         Continue in demo mode
       </button>
 
     </form>
-
 
     <p class="clinical-note">
       Prototype only — not for clinical decision-making
@@ -102,10 +82,7 @@
 
   <!-- APPLICATION -->
 
-  <section
-    id="app-screen"
-    class="screen"
-  >
+  <section id="app-screen" class="screen">
 
     <header class="topbar">
 
@@ -120,7 +97,6 @@
         </h2>
 
       </div>
-
 
       <button
         id="notification-button"
@@ -141,10 +117,7 @@
 
     <!-- SCAN BAG -->
 
-    <div
-      class="view active"
-      data-view="scan"
-    >
+    <div class="view active" data-view="scan">
 
       <div class="section-intro">
 
@@ -154,12 +127,10 @@
 
         <p>
           The QR code supplies the bag ID,
-          patient ID, Nesso device ID
-          and bag capacity.
+          patient ID, Nesso device ID and bag capacity.
         </p>
 
       </div>
-
 
       <div class="camera-card">
 
@@ -168,7 +139,6 @@
           playsinline
           muted
         ></video>
-
 
         <div
           id="camera-placeholder"
@@ -190,14 +160,12 @@
 
       </div>
 
-
       <div
         id="scan-message"
         class="status-line"
       >
         Camera is off.
       </div>
-
 
       <button
         id="start-camera"
@@ -206,14 +174,12 @@
         Start camera / QR scan
       </button>
 
-
       <button
         id="demo-scan"
         class="btn primary"
       >
         Use demo QR code
       </button>
-
 
       <div class="link-card">
 
@@ -222,7 +188,7 @@
         </strong>
 
         <code>
-          BAG=UB-2026-001|PATIENT=P-0001|DEVICE=NC-72X|CAPACITY_ML=2000
+          BAG=UB-2026-001|PATIENT=P-0001|DEVICE=NC-72X|CAPACITY_ML=200
         </code>
 
       </div>
@@ -232,10 +198,7 @@
 
     <!-- PATIENT -->
 
-    <div
-      class="view"
-      data-view="patient"
-    >
+    <div class="view" data-view="patient">
 
       <div class="patient-hero card">
 
@@ -262,13 +225,11 @@
 
         </div>
 
-
         <span class="pill success">
           Bag linked
         </span>
 
       </div>
-
 
       <div class="card details-list">
 
@@ -314,7 +275,9 @@
 
         <div>
           <span>Monitoring</span>
-          <strong>Continuous</strong>
+          <strong>
+            3-minute urine windows
+          </strong>
         </div>
 
         <div>
@@ -326,14 +289,12 @@
 
       </div>
 
-
       <button
         class="btn primary"
         data-go="dashboard"
       >
         View live monitoring
       </button>
-
 
       <button
         class="btn ghost"
@@ -347,10 +308,7 @@
 
     <!-- LIVE DASHBOARD -->
 
-    <div
-      class="view"
-      data-view="dashboard"
-    >
+    <div class="view" data-view="dashboard">
 
       <div
         id="alert-banner"
@@ -368,11 +326,9 @@
             Alert
           </strong>
 
-          <p id="alert-message">
-          </p>
+          <p id="alert-message"></p>
 
         </div>
-
 
         <button
           id="ack-alert"
@@ -382,7 +338,6 @@
         </button>
 
       </div>
-
 
       <div class="dashboard-head">
 
@@ -407,7 +362,6 @@
           </h3>
 
         </div>
-
 
         <span
           id="connection-pill"
@@ -438,7 +392,6 @@
 
         </div>
 
-
         <div class="big-number">
 
           <span id="bag-volume-value">
@@ -451,7 +404,6 @@
 
         </div>
 
-
         <div class="progress-track">
 
           <div
@@ -460,7 +412,6 @@
           ></div>
 
         </div>
-
 
         <p class="progress-caption">
 
@@ -473,7 +424,6 @@
             % full
 
           </span>
-
 
           <span>
 
@@ -489,7 +439,6 @@
 
         </p>
 
-
         <p
           id="bag-message"
           class="helper"
@@ -500,14 +449,14 @@
       </div>
 
 
-      <!-- HOURLY URINE -->
+      <!-- 3-MINUTE URINE -->
 
       <div class="metric-grid">
 
         <div class="card mini-metric">
 
           <span>
-            Current hour urine
+            Current 3-minute urine
           </span>
 
           <strong>
@@ -526,23 +475,22 @@
 
         </div>
 
-
         <div class="card mini-metric">
 
           <span>
-            Hourly range
+            3-minute range
           </span>
 
           <strong>
 
             <span id="hourly-range-display">
-              50–200
+              50–150
             </span>
 
           </strong>
 
           <small>
-            mL/hour
+            mL / 3 min
           </small>
 
         </div>
@@ -568,13 +516,11 @@
 
           </div>
 
-
           <span id="feed-time">
             Waiting
           </span>
 
         </div>
-
 
         <div class="sensor-row">
 
@@ -594,7 +540,6 @@
 
         </div>
 
-
         <div class="sensor-row">
 
           <span>
@@ -606,7 +551,6 @@
           </strong>
 
         </div>
-
 
         <div class="sensor-row">
 
@@ -620,7 +564,6 @@
 
         </div>
 
-
         <div class="sensor-row">
 
           <span>
@@ -632,7 +575,6 @@
           </strong>
 
         </div>
-
 
         <div class="sensor-row">
 
@@ -652,7 +594,6 @@
 
         </div>
 
-
         <div class="sensor-row">
 
           <span>
@@ -671,7 +612,6 @@
 
         </div>
 
-
         <div class="button-row">
 
           <button
@@ -681,16 +621,14 @@
             Connect Web Serial
           </button>
 
-
           <button
             id="simulate-reading"
             class="btn ghost compact"
           >
-            +250 mL demo
+            +25 mL demo
           </button>
 
         </div>
-
 
         <p
           id="serial-status"
@@ -702,7 +640,6 @@
 
       </div>
 
-
       <div class="card threshold-callout">
 
         <div>
@@ -712,13 +649,12 @@
           </strong>
 
           <p>
-            Bag fullness uses QR capacity.
-            Hourly urine uses the configured
-            lower/upper hourly range.
+            Bag fullness uses the 200 mL QR capacity.
+            Urine-production alerts use the configured
+            50–150 mL per 3-minute range.
           </p>
 
         </div>
-
 
         <button
           class="small-btn"
@@ -728,7 +664,6 @@
         </button>
 
       </div>
-
 
       <button
         class="btn primary"
@@ -742,10 +677,7 @@
 
     <!-- FLUID BALANCE CHART -->
 
-    <div
-      class="view"
-      data-view="chart"
-    >
+    <div class="view" data-view="chart">
 
       <div class="section-intro">
 
@@ -754,20 +686,20 @@
         </h3>
 
         <p>
-          Urine output is logged automatically.
+          Urine output is logged automatically
+          in 3-minute windows.
           Nursing staff enter the other
           input/output values.
         </p>
 
       </div>
 
-
       <div class="card live-strip">
 
         <div>
 
           <span class="eyebrow">
-            CURRENT HOUR
+            CURRENT 3-MINUTE WINDOW
           </span>
 
           <strong>
@@ -786,7 +718,6 @@
 
         </div>
 
-
         <span
           id="chart-hourly-status"
           class="pill"
@@ -796,16 +727,14 @@
 
       </div>
 
-
       <div class="chart-actions">
 
         <button
           id="add-current-hour"
           class="btn secondary compact"
         >
-          + Current hour
+          + Current 3-minute window
         </button>
-
 
         <button
           id="export-fluid-csv"
@@ -815,7 +744,6 @@
         </button>
 
       </div>
-
 
       <div class="fluid-table-wrap card">
 
@@ -850,7 +778,6 @@
               </th>
 
             </tr>
-
 
             <tr>
 
@@ -902,7 +829,6 @@
 
           </thead>
 
-
           <tbody id="fluid-balance-body">
           </tbody>
 
@@ -910,13 +836,11 @@
 
       </div>
 
-
       <p class="table-hint">
         ↔ Swipe horizontally on a phone.
         Urine cells are read-only and come
         from the Nesso feed.
       </p>
-
 
       <div class="card balance-summary">
 
@@ -938,7 +862,6 @@
 
         </div>
 
-
         <div>
 
           <span>
@@ -957,7 +880,6 @@
 
         </div>
 
-
         <div>
 
           <span>
@@ -972,7 +894,6 @@
 
       </div>
 
-
       <button
         id="reset-fluid-session"
         class="btn ghost"
@@ -985,10 +906,7 @@
 
     <!-- ALERTS -->
 
-    <div
-      class="view"
-      data-view="notifications"
-    >
+    <div class="view" data-view="notifications">
 
       <div class="section-intro">
 
@@ -997,12 +915,12 @@
         </h3>
 
         <p>
-          Bag-capacity alerts and hourly
-          urine-output alerts appear separately.
+          Bag-capacity alerts and 3-minute
+          urine-output alerts are independent
+          and use different sounds.
         </p>
 
       </div>
-
 
       <div
         id="notification-list"
@@ -1022,8 +940,8 @@
           <p>
             Alerts will appear here when
             a bag milestone is reached
-            or hourly urine is outside
-            the configured range.
+            or 3-minute urine output is
+            outside the configured range.
           </p>
 
         </div>
@@ -1035,10 +953,7 @@
 
     <!-- SETTINGS -->
 
-    <div
-      class="view"
-      data-view="settings"
-    >
+    <div class="view" data-view="settings">
 
       <div class="section-intro">
 
@@ -1047,16 +962,15 @@
         </h3>
 
         <p>
-          The bag capacity comes from
-          the QR code.
-          Hourly urine limits are
-          configured separately.
+          Bag capacity comes from the QR code.
+          Urine output is evaluated separately
+          in 3-minute windows.
         </p>
 
       </div>
 
 
-      <!-- BAG SETTING -->
+      <!-- BAG -->
 
       <div class="card settings-card">
 
@@ -1076,7 +990,6 @@
 
         </div>
 
-
         <div>
 
           <span>
@@ -1095,7 +1008,6 @@
 
         </div>
 
-
         <div>
 
           <span>
@@ -1111,7 +1023,7 @@
       </div>
 
 
-      <!-- HOURLY THRESHOLDS -->
+      <!-- 3-MINUTE THRESHOLDS -->
 
       <form
         id="hourly-threshold-form"
@@ -1119,13 +1031,12 @@
       >
 
         <p class="eyebrow">
-          HOURLY URINE OUTPUT
+          3-MINUTE URINE OUTPUT
         </p>
-
 
         <label>
 
-          Lower hourly threshold (mL/hour)
+          Lower threshold (mL / 3 min)
 
           <input
             id="hourly-min-input"
@@ -1138,10 +1049,9 @@
 
         </label>
 
-
         <label>
 
-          Upper hourly threshold (mL/hour)
+          Upper threshold (mL / 3 min)
 
           <input
             id="hourly-max-input"
@@ -1149,39 +1059,72 @@
             min="1"
             max="5000"
             step="1"
-            value="200"
+            value="150"
           >
 
         </label>
-
 
         <button
           type="submit"
           class="btn primary"
         >
-          Save hourly thresholds
+          Save 3-minute thresholds
         </button>
-
 
         <button
           id="evaluate-hour-now"
           type="button"
           class="btn secondary"
         >
-          Evaluate current hour now (demo)
+          Evaluate current 3-minute window now (demo)
         </button>
 
-
         <p class="helper">
-          High hourly output can alert immediately.
-          Low hourly output is normally evaluated
-          after the hour ends.
-          “Evaluate current hour now” is included
-          only to demonstrate the low-output alert
-          without waiting for the hour to finish.
+          Output above 150 mL can alert immediately.
+          Output below 50 mL is normally evaluated
+          when the 3-minute window ends.
+          The demo button lets you test the low-output
+          alert immediately.
         </p>
 
       </form>
+
+
+      <!-- SOUND TEST -->
+
+      <div class="card form-card">
+
+        <p class="eyebrow">
+          ALERT SOUNDS
+        </p>
+
+        <p class="helper">
+          Bag alerts use a rising chime.
+          Urine-production alerts use a separate
+          urgent three-tone pattern.
+        </p>
+
+        <div class="chart-actions">
+
+          <button
+            id="test-bag-sound"
+            type="button"
+            class="btn secondary compact"
+          >
+            Test bag sound
+          </button>
+
+          <button
+            id="test-urine-sound"
+            type="button"
+            class="btn secondary compact"
+          >
+            Test urine sound
+          </button>
+
+        </div>
+
+      </div>
 
 
       <div class="card settings-card">
@@ -1197,7 +1140,6 @@
           </strong>
 
         </div>
-
 
         <div>
 
@@ -1228,7 +1170,6 @@
         <small>Scan</small>
       </button>
 
-
       <button
         class="nav-item"
         data-go="patient"
@@ -1236,7 +1177,6 @@
         <span>♙</span>
         <small>Patient</small>
       </button>
-
 
       <button
         class="nav-item"
@@ -1246,7 +1186,6 @@
         <small>Live</small>
       </button>
 
-
       <button
         class="nav-item"
         data-go="chart"
@@ -1255,7 +1194,6 @@
         <small>Chart</small>
       </button>
 
-
       <button
         class="nav-item"
         data-go="notifications"
@@ -1263,7 +1201,6 @@
         <span>♢</span>
         <small>Alerts</small>
       </button>
-
 
       <button
         class="nav-item"
@@ -1277,14 +1214,12 @@
 
   </section>
 
-
   <div
     id="toast"
     class="toast"
   ></div>
 
 </main>
-
 
 <script src="app.js"></script>
 
