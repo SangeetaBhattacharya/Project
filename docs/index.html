@@ -1,12 +1,29 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b5f6d">
-  <title>Smart Urine Monitoring</title>
-  <link rel="stylesheet" href="styles.css">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#0b5f6d"
+  >
+
+  <title>
+    Smart Urine Monitoring
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="styles.css"
+  >
 </head>
+
 
 <body>
 
@@ -16,13 +33,21 @@
     Interactive prototype · live sensor capable
   </div>
 
-  <!-- LOGIN -->
 
-  <section id="login-screen" class="screen active auth-screen">
+  <!-- =====================================
+       LOGIN
+  ====================================== -->
+
+  <section
+    id="login-screen"
+    class="screen active auth-screen"
+  >
 
     <div class="brand-block">
 
-      <div class="brand-mark">◉</div>
+      <div class="brand-mark">
+        ◉
+      </div>
 
       <p class="eyebrow">
         SMART URINE MONITORING
@@ -38,7 +63,11 @@
 
     </div>
 
-    <form id="login-form" class="card form-card">
+
+    <form
+      id="login-form"
+      class="card form-card"
+    >
 
       <label>
         Work email
@@ -46,10 +75,11 @@
         <input
           id="email"
           type="email"
-          value="clinician@example.nhs.uk"
+          value="nurse.ward5a@example.nhs.uk"
           required
         >
       </label>
+
 
       <label>
         Password
@@ -62,15 +92,25 @@
         >
       </label>
 
-      <button class="btn primary" type="submit">
+
+      <button
+        class="btn primary"
+        type="submit"
+      >
         Sign in
       </button>
 
-      <button class="text-btn" type="button" id="demo-login">
+
+      <button
+        class="text-btn"
+        type="button"
+        id="demo-login"
+      >
         Continue in demo mode
       </button>
 
     </form>
+
 
     <p class="clinical-note">
       Prototype only — not for clinical decision-making
@@ -80,9 +120,14 @@
   </section>
 
 
-  <!-- APPLICATION -->
+  <!-- =====================================
+       MAIN APPLICATION
+  ====================================== -->
 
-  <section id="app-screen" class="screen">
+  <section
+    id="app-screen"
+    class="screen"
+  >
 
     <header class="topbar">
 
@@ -93,10 +138,11 @@
         </p>
 
         <h2 id="page-title">
-          Scan urinary bag
+          Ward 5A patients
         </h2>
 
       </div>
+
 
       <button
         id="notification-button"
@@ -115,22 +161,119 @@
     </header>
 
 
-    <!-- SCAN BAG -->
+    <!-- =====================================
+         PATIENT SELECTION
+    ====================================== -->
 
-    <div class="view active" data-view="scan">
+    <div
+      class="view"
+      data-view="patients"
+    >
+
+      <div class="section-intro">
+
+        <p class="eyebrow">
+          ASSIGNED WARD
+        </p>
+
+        <h3>
+          Ward 5A patients
+        </h3>
+
+        <p>
+          Select the patient before attaching
+          and scanning a urinary bag.
+          Each patient has an independent
+          monitoring record.
+        </p>
+
+      </div>
+
+
+      <div class="card ward-summary">
+
+        <div>
+          <span>
+            Healthcare professional
+          </span>
+
+          <strong>
+            Demo Nurse
+          </strong>
+        </div>
+
+        <div>
+          <span>
+            Assigned ward
+          </span>
+
+          <strong>
+            Ward 5A
+          </strong>
+        </div>
+
+      </div>
+
+
+      <div
+        id="patient-selection-list"
+        class="patient-selection-list"
+      ></div>
+
+    </div>
+
+
+    <!-- =====================================
+         SCAN BAG
+    ====================================== -->
+
+    <div
+      class="view"
+      data-view="scan"
+    >
+
+      <div class="selected-patient-banner card">
+
+        <div>
+
+          <p class="eyebrow">
+            SELECTED PATIENT
+          </p>
+
+          <strong id="scan-patient-name">
+            —
+          </strong>
+
+          <small id="scan-patient-details">
+            —
+          </small>
+
+        </div>
+
+
+        <button
+          class="small-btn"
+          data-go="patients"
+        >
+          Change patient
+        </button>
+
+      </div>
+
 
       <div class="section-intro">
 
         <h3>
-          Link a urinary bag
+          Link urinary bag
         </h3>
 
         <p>
-          The QR code supplies the bag ID,
-          patient ID, Nesso device ID and bag capacity.
+          Scan the QR code only after confirming
+          the correct patient.
         </p>
 
       </div>
+
 
       <div class="camera-card">
 
@@ -139,6 +282,7 @@
           playsinline
           muted
         ></video>
+
 
         <div
           id="camera-placeholder"
@@ -150,15 +294,18 @@
             <span></span>
             <span></span>
             <span></span>
+            <span></span>
           </div>
 
           <p>
-            Position the bag QR code inside the frame
+            Position the urinary bag QR code
+            inside the frame
           </p>
 
         </div>
 
       </div>
+
 
       <div
         id="scan-message"
@@ -167,6 +314,7 @@
         Camera is off.
       </div>
 
+
       <button
         id="start-camera"
         class="btn secondary"
@@ -174,21 +322,23 @@
         Start camera / QR scan
       </button>
 
+
       <button
         id="demo-scan"
         class="btn primary"
       >
-        Use demo QR code
+        Attach demo 200 mL bag
       </button>
+
 
       <div class="link-card">
 
         <strong>
-          Demo QR format
+          Demo QR
         </strong>
 
-        <code>
-          BAG=UB-2026-001|PATIENT=P-0001|DEVICE=NC-72X|CAPACITY_ML=200
+        <code id="demo-qr-code-text">
+          Select a patient first
         </code>
 
       </div>
@@ -196,98 +346,114 @@
     </div>
 
 
-    <!-- PATIENT -->
+    <!-- =====================================
+         PATIENT DETAILS
+    ====================================== -->
 
-    <div class="view" data-view="patient">
+    <div
+      class="view"
+      data-view="patient"
+    >
 
       <div class="patient-hero card">
 
-        <div class="avatar">
-          DP
+        <div
+          id="patient-avatar"
+          class="avatar"
+        >
+          —
         </div>
+
 
         <div>
 
           <p class="eyebrow">
-            LINKED PATIENT
+            SELECTED PATIENT
           </p>
 
-          <h3>
-            Demo Patient
+          <h3 id="patient-name">
+            —
           </h3>
 
           <p class="muted">
-            Patient ID
+
             <span id="patient-id">
-              P-0001
+              —
             </span>
+
+            · Bed
+
+            <span id="patient-bed">
+              —
+            </span>
+
           </p>
 
         </div>
 
-        <span class="pill success">
-          Bag linked
+
+        <span
+          id="patient-monitoring-status"
+          class="pill"
+        >
+          Not monitoring
         </span>
 
       </div>
+
 
       <div class="card details-list">
 
         <div>
           <span>Ward</span>
-          <strong>Ward 5A</strong>
+          <strong id="patient-ward">—</strong>
         </div>
 
         <div>
           <span>Bed</span>
-          <strong>12</strong>
+          <strong id="patient-bed-detail">—</strong>
         </div>
 
         <div>
           <span>Urinary bag</span>
-          <strong id="patient-bag-id">
-            Not scanned
-          </strong>
+          <strong id="patient-bag-id">Not attached</strong>
         </div>
 
         <div>
           <span>Bag capacity</span>
 
           <strong>
-            <span id="patient-bag-capacity">
-              —
-            </span>
+            <span id="patient-bag-capacity">—</span>
             mL
           </strong>
         </div>
 
         <div>
-          <span>Capacity source</span>
-          <strong>QR code</strong>
-        </div>
-
-        <div>
           <span>Device</span>
-          <strong id="patient-device-id">
-            Not linked
-          </strong>
+          <strong id="patient-device-id">Not linked</strong>
         </div>
 
         <div>
-          <span>Monitoring</span>
+          <span>Logging started</span>
+          <strong id="patient-logging-date">Not started</strong>
+        </div>
+
+        <div>
+          <span>Urine monitoring</span>
           <strong>
-            3-minute urine windows
+            3-minute windows
           </strong>
         </div>
 
         <div>
-          <span>Last QR scan</span>
-          <strong id="last-scan-time">
-            Not scanned
+          <span>Configured range</span>
+          <strong>
+            50–150 mL / 3 min
           </strong>
         </div>
 
       </div>
+
 
       <button
         class="btn primary"
@@ -296,19 +462,25 @@
         View live monitoring
       </button>
 
+
       <button
         class="btn ghost"
-        data-go="scan"
+        data-go="patients"
       >
-        Scan a different bag
+        Back to patient list
       </button>
 
     </div>
 
 
-    <!-- LIVE DASHBOARD -->
+    <!-- =====================================
+         LIVE DASHBOARD
+    ====================================== -->
 
-    <div class="view" data-view="dashboard">
+    <div
+      class="view"
+      data-view="dashboard"
+    >
 
       <div
         id="alert-banner"
@@ -320,7 +492,13 @@
           !
         </div>
 
+
         <div>
+
+          <div
+            id="alert-patient-context"
+            class="alert-context"
+          ></div>
 
           <strong id="alert-title">
             Alert
@@ -329,6 +507,7 @@
           <p id="alert-message"></p>
 
         </div>
+
 
         <button
           id="ack-alert"
@@ -339,14 +518,29 @@
 
       </div>
 
+
       <div class="dashboard-head">
 
         <div>
 
           <p class="eyebrow">
+            CURRENT PATIENT
+          </p>
 
-            <span id="dashboard-patient">
-              P-0001
+          <h3 id="dashboard-patient-name">
+            —
+          </h3>
+
+          <p class="dashboard-patient-meta">
+
+            <span id="dashboard-patient-id">
+              —
+            </span>
+
+            · Bed
+
+            <span id="dashboard-bed">
+              —
             </span>
 
             ·
@@ -357,11 +551,8 @@
 
           </p>
 
-          <h3>
-            Urinary bag status
-          </h3>
-
         </div>
+
 
         <span
           id="connection-pill"
@@ -392,6 +583,7 @@
 
         </div>
 
+
         <div class="big-number">
 
           <span id="bag-volume-value">
@@ -404,6 +596,7 @@
 
         </div>
 
+
         <div class="progress-track">
 
           <div
@@ -413,31 +606,22 @@
 
         </div>
 
+
         <p class="progress-caption">
 
           <span>
-
-            <strong id="bag-percent">
-              0
-            </strong>
-
+            <strong id="bag-percent">0</strong>
             % full
-
           </span>
 
           <span>
-
             Capacity:
-
-            <strong id="bag-capacity-display">
-              —
-            </strong>
-
+            <strong id="bag-capacity-display">—</strong>
             mL
-
           </span>
 
         </p>
+
 
         <p
           id="bag-message"
@@ -460,13 +644,8 @@
           </span>
 
           <strong>
-
-            <span id="hourly-urine-value">
-              0.0
-            </span>
-
+            <span id="hourly-urine-value">0.0</span>
             mL
-
           </strong>
 
           <small id="hourly-status">
@@ -475,6 +654,7 @@
 
         </div>
 
+
         <div class="card mini-metric">
 
           <span>
@@ -482,11 +662,9 @@
           </span>
 
           <strong>
-
             <span id="hourly-range-display">
               50–150
             </span>
-
           </strong>
 
           <small>
@@ -516,11 +694,13 @@
 
           </div>
 
+
           <span id="feed-time">
             Waiting
           </span>
 
         </div>
+
 
         <div class="sensor-row">
 
@@ -529,88 +709,50 @@
           </span>
 
           <strong>
-
-            <span id="sensor-total-value">
-              0.0
-            </span>
-
+            <span id="sensor-total-value">0.0</span>
             mL
-
           </strong>
 
         </div>
 
+
         <div class="sensor-row">
+          <span>Clarity</span>
+          <strong id="clarity-value">UNKNOWN</strong>
+        </div>
 
-          <span>
-            Clarity
-          </span>
+        <div class="sensor-row">
+          <span>Pulses</span>
+          <strong id="pulses-value">0</strong>
+        </div>
 
-          <strong id="clarity-value">
-            UNKNOWN
-          </strong>
-
+        <div class="sensor-row">
+          <span>Turbidity raw</span>
+          <strong id="raw-value">0</strong>
         </div>
 
         <div class="sensor-row">
 
-          <span>
-            Pulses
-          </span>
-
-          <strong id="pulses-value">
-            0
-          </strong>
-
-        </div>
-
-        <div class="sensor-row">
-
-          <span>
-            Turbidity raw
-          </span>
-
-          <strong id="raw-value">
-            0
-          </strong>
-
-        </div>
-
-        <div class="sensor-row">
-
-          <span>
-            Vout
-          </span>
+          <span>Vout</span>
 
           <strong>
-
-            <span id="vout-value">
-              0.00
-            </span>
-
+            <span id="vout-value">0.00</span>
             V
-
           </strong>
 
         </div>
 
         <div class="sensor-row">
 
-          <span>
-            Vin
-          </span>
+          <span>Vin</span>
 
           <strong>
-
-            <span id="vin-value">
-              0.00
-            </span>
-
+            <span id="vin-value">0.00</span>
             V
-
           </strong>
 
         </div>
+
 
         <div class="button-row">
 
@@ -621,6 +763,7 @@
             Connect Web Serial
           </button>
 
+
           <button
             id="simulate-reading"
             class="btn ghost compact"
@@ -629,6 +772,7 @@
           </button>
 
         </div>
+
 
         <p
           id="serial-status"
@@ -640,21 +784,23 @@
 
       </div>
 
+
       <div class="card threshold-callout">
 
         <div>
 
           <strong>
-            Two independent alert systems
+            Two independent alerts
           </strong>
 
           <p>
-            Bag fullness uses the 200 mL QR capacity.
-            Urine-production alerts use the configured
-            50–150 mL per 3-minute range.
+            Bag capacity alerts use a rising chime.
+            Abnormal urine-production alerts use
+            a separate urgent alarm.
           </p>
 
         </div>
+
 
         <button
           class="small-btn"
@@ -665,19 +811,46 @@
 
       </div>
 
+
       <button
         class="btn primary"
         data-go="chart"
       >
-        Open fluid balance chart
+        Open this patient's fluid balance chart
       </button>
 
     </div>
 
 
-    <!-- FLUID BALANCE CHART -->
+    <!-- =====================================
+         FLUID BALANCE CHART
+    ====================================== -->
 
-    <div class="view" data-view="chart">
+    <div
+      class="view"
+      data-view="chart"
+    >
+
+      <div class="selected-patient-banner card">
+
+        <div>
+
+          <p class="eyebrow">
+            FLUID BALANCE FOR
+          </p>
+
+          <strong id="chart-patient-name">
+            —
+          </strong>
+
+          <small id="chart-patient-details">
+            —
+          </small>
+
+        </div>
+
+      </div>
+
 
       <div class="section-intro">
 
@@ -687,12 +860,13 @@
 
         <p>
           Urine output is logged automatically
-          in 3-minute windows.
-          Nursing staff enter the other
-          input/output values.
+          for the selected patient.
+          Other fluid input/output values
+          are entered manually.
         </p>
 
       </div>
+
 
       <div class="card live-strip">
 
@@ -703,13 +877,8 @@
           </span>
 
           <strong>
-
-            <span id="chart-hourly-volume">
-              0.0
-            </span>
-
+            <span id="chart-hourly-volume">0.0</span>
             mL urine
-
           </strong>
 
           <small id="chart-source">
@@ -717,6 +886,7 @@
           </small>
 
         </div>
+
 
         <span
           id="chart-hourly-status"
@@ -726,6 +896,7 @@
         </span>
 
       </div>
+
 
       <div class="chart-actions">
 
@@ -740,10 +911,11 @@
           id="export-fluid-csv"
           class="btn ghost compact"
         >
-          Export CSV
+          Export patient CSV
         </button>
 
       </div>
+
 
       <div class="fluid-table-wrap card">
 
@@ -779,11 +951,10 @@
 
             </tr>
 
+
             <tr>
 
-              <th>
-                Oral
-              </th>
+              <th>Oral</th>
 
               <th>
                 IV
@@ -806,18 +977,12 @@
               <th class="auto-head">
                 Urine
                 <br>
-                <small>
-                  Auto
-                </small>
+                <small>Auto</small>
               </th>
 
-              <th>
-                Drain
-              </th>
+              <th>Drain</th>
 
-              <th>
-                Vomit
-              </th>
+              <th>Vomit</th>
 
               <th>
                 Running
@@ -829,6 +994,7 @@
 
           </thead>
 
+
           <tbody id="fluid-balance-body">
           </tbody>
 
@@ -836,11 +1002,13 @@
 
       </div>
 
+
       <p class="table-hint">
         ↔ Swipe horizontally on a phone.
-        Urine cells are read-only and come
-        from the Nesso feed.
+        Urine cells are read-only and belong
+        only to the selected patient.
       </p>
+
 
       <div class="card balance-summary">
 
@@ -851,16 +1019,12 @@
           </span>
 
           <strong>
-
-            <span id="summary-input">
-              0
-            </span>
-
+            <span id="summary-input">0</span>
             mL
-
           </strong>
 
         </div>
+
 
         <div>
 
@@ -869,16 +1033,12 @@
           </span>
 
           <strong>
-
-            <span id="summary-output">
-              0
-            </span>
-
+            <span id="summary-output">0</span>
             mL
-
           </strong>
 
         </div>
+
 
         <div>
 
@@ -894,136 +1054,109 @@
 
       </div>
 
+
       <button
         id="reset-fluid-session"
         class="btn ghost"
       >
-        Start new fluid-balance session
+        Start new fluid-balance session for this patient
       </button>
 
     </div>
 
 
-    <!-- ALERTS -->
+    <!-- =====================================
+         WARD ALERTS
+    ====================================== -->
 
-    <div class="view" data-view="notifications">
+    <div
+      class="view"
+      data-view="notifications"
+    >
 
       <div class="section-intro">
 
+        <p class="eyebrow">
+          WARD 5A
+        </p>
+
         <h3>
-          Alerts & notifications
+          Patient alerts
         </h3>
 
         <p>
-          Bag-capacity alerts and 3-minute
-          urine-output alerts are independent
-          and use different sounds.
+          Alerts from all monitored patients
+          assigned to the logged-in healthcare
+          professional are shown here.
         </p>
 
       </div>
+
 
       <div
         id="notification-list"
         class="notification-list"
-      >
-
-        <div class="empty-state">
-
-          <div>
-            🔔
-          </div>
-
-          <strong>
-            No alerts yet
-          </strong>
-
-          <p>
-            Alerts will appear here when
-            a bag milestone is reached
-            or 3-minute urine output is
-            outside the configured range.
-          </p>
-
-        </div>
-
-      </div>
+      ></div>
 
     </div>
 
 
-    <!-- SETTINGS -->
+    <!-- =====================================
+         SETTINGS
+    ====================================== -->
 
-    <div class="view" data-view="settings">
+    <div
+      class="view"
+      data-view="settings"
+    >
 
       <div class="section-intro">
 
         <h3>
-          Alert settings
+          Monitoring settings
         </h3>
 
         <p>
-          Bag capacity comes from the QR code.
-          Urine output is evaluated separately
-          in 3-minute windows.
+          Bag capacity is obtained from the QR code.
+          Urine-production limits are configured
+          separately.
         </p>
 
       </div>
 
-
-      <!-- BAG -->
 
       <div class="card settings-card">
 
         <p class="eyebrow">
-          URINARY BAG
+          SELECTED PATIENT
         </p>
 
         <div>
-
-          <span>
-            Bag ID
-          </span>
-
-          <strong id="settings-bag-id">
-            Not scanned
-          </strong>
-
+          <span>Patient</span>
+          <strong id="settings-patient-name">None selected</strong>
         </div>
 
         <div>
+          <span>Patient ID</span>
+          <strong id="settings-patient-id">—</strong>
+        </div>
 
-          <span>
-            Capacity
-          </span>
+        <div>
+          <span>Bag</span>
+          <strong id="settings-bag-id">—</strong>
+        </div>
+
+        <div>
+          <span>Bag capacity</span>
 
           <strong>
-
-            <span id="settings-bag-capacity">
-              —
-            </span>
-
+            <span id="settings-bag-capacity">—</span>
             mL
-
           </strong>
-
-        </div>
-
-        <div>
-
-          <span>
-            Capacity source
-          </span>
-
-          <strong>
-            QR code
-          </strong>
-
         </div>
 
       </div>
 
-
-      <!-- 3-MINUTE THRESHOLDS -->
 
       <form
         id="hourly-threshold-form"
@@ -1033,6 +1166,7 @@
         <p class="eyebrow">
           3-MINUTE URINE OUTPUT
         </p>
+
 
         <label>
 
@@ -1049,6 +1183,7 @@
 
         </label>
 
+
         <label>
 
           Upper threshold (mL / 3 min)
@@ -1064,6 +1199,7 @@
 
         </label>
 
+
         <button
           type="submit"
           class="btn primary"
@@ -1071,26 +1207,24 @@
           Save 3-minute thresholds
         </button>
 
+
         <button
           id="evaluate-hour-now"
           type="button"
           class="btn secondary"
         >
-          Evaluate current 3-minute window now (demo)
+          Evaluate current patient's window now
         </button>
 
+
         <p class="helper">
-          Output above 150 mL can alert immediately.
-          Output below 50 mL is normally evaluated
+          Above 150 mL can trigger immediately.
+          Below 50 mL is normally evaluated
           when the 3-minute window ends.
-          The demo button lets you test the low-output
-          alert immediately.
         </p>
 
       </form>
 
-
-      <!-- SOUND TEST -->
 
       <div class="card form-card">
 
@@ -1099,10 +1233,10 @@
         </p>
 
         <p class="helper">
-          Bag alerts use a rising chime.
-          Urine-production alerts use a separate
-          urgent three-tone pattern.
+          Bag alerts and urine-production alerts
+          have different sounds.
         </p>
+
 
         <div class="chart-actions">
 
@@ -1113,6 +1247,7 @@
           >
             Test bag sound
           </button>
+
 
           <button
             id="test-urine-sound"
@@ -1130,27 +1265,15 @@
       <div class="card settings-card">
 
         <div>
-
-          <span>
-            Patient
-          </span>
-
-          <strong id="settings-patient-id">
-            P-0001
-          </strong>
-
+          <span>Assigned ward</span>
+          <strong>Ward 5A</strong>
         </div>
 
         <div>
-
-          <span>
-            Data source
-          </span>
-
+          <span>Data source</span>
           <strong id="settings-source">
             Waiting for live feed
           </strong>
-
         </div>
 
       </div>
@@ -1158,17 +1281,29 @@
     </div>
 
 
-    <!-- NAVIGATION -->
+    <!-- =====================================
+         BOTTOM NAVIGATION
+    ====================================== -->
 
     <nav class="bottom-nav">
 
       <button
         class="nav-item active"
+        data-go="patients"
+      >
+        <span>☷</span>
+        <small>Patients</small>
+      </button>
+
+
+      <button
+        class="nav-item"
         data-go="scan"
       >
         <span>⌗</span>
         <small>Scan</small>
       </button>
+
 
       <button
         class="nav-item"
@@ -1178,6 +1313,7 @@
         <small>Patient</small>
       </button>
 
+
       <button
         class="nav-item"
         data-go="dashboard"
@@ -1185,6 +1321,7 @@
         <span>◉</span>
         <small>Live</small>
       </button>
+
 
       <button
         class="nav-item"
@@ -1194,6 +1331,7 @@
         <small>Chart</small>
       </button>
 
+
       <button
         class="nav-item"
         data-go="notifications"
@@ -1201,6 +1339,7 @@
         <span>♢</span>
         <small>Alerts</small>
       </button>
+
 
       <button
         class="nav-item"
@@ -1214,12 +1353,14 @@
 
   </section>
 
+
   <div
     id="toast"
     class="toast"
   ></div>
 
 </main>
+
 
 <script src="app.js"></script>
 
