@@ -1,120 +1,56 @@
+/* =====================================
+   SMART URINE MONITORING PROTOTYPE
+
+   Demo configuration:
+   Bag capacity: 200 mL
+   Monitoring window: 3 minutes
+   Low threshold: < 50 mL
+   High threshold: > 150 mL
+===================================== */
+
+
 const MONITORING_WINDOW_MINUTES = 3;
 
 const DEFAULT_WINDOW_MIN_ML = 50;
 const DEFAULT_WINDOW_MAX_ML = 150;
 
-const STORAGE_ROWS =
-  `smartUrineFluidRows_${MONITORING_WINDOW_MINUTES}min`;
+const STORAGE_PATIENT_RECORDS =
+  'smartUrinePatientRecordsV2';
 
 const STORAGE_WINDOW_MIN =
-  `urineWindowMinMl_${MONITORING_WINDOW_MINUTES}min`;
+  'smartUrine3MinMinMl';
 
 const STORAGE_WINDOW_MAX =
-  `urineWindowMaxMl_${MONITORING_WINDOW_MINUTES}min`;
-
-const SESSION_LAST_SENSOR =
-  'smartUrineLastSensorTotal';
-
-const DEMO_BAG_QR =
-  'BAG=UB-2026-001|' +
-  'PATIENT=P-0001|' +
-  'DEVICE=NC-72X|' +
-  'CAPACITY_ML=200';
+  'smartUrine3MinMaxMl';
 
 
-const state = {
+const NURSE_WARD =
+  'Ward 5A';
 
-  loggedIn: false,
 
-  currentView: 'scan',
+const DEMO_PATIENTS = [
 
-  scanned: false,
-
-  reading: {
-
-    volume: 0,
-
-    pulses: 0,
-
-    turbidityRaw: 0,
-
-    vout: 0,
-
-    vin: 0,
-
-    clarity: 'UNKNOWN'
-
+  {
+    id: 'P-0001',
+    name: 'Aisha Rahman',
+    ward: 'Ward 5A',
+    bed: '12'
   },
 
-  bag: {
+  {
+    id: 'P-0002',
+    name: 'John Miller',
+    ward: 'Ward 5A',
+    bed: '14'
+  }
 
-    id: null,
-
-    patientId: 'P-0001',
-
-    deviceId: null,
-
-    capacityMl: 0,
-
-    startSensorTotal: 0,
-
-    sessionId: null
-
-  },
-
-  urineLimits: {
-
-    minMl:
-      Number(
-        localStorage.getItem(
-          STORAGE_WINDOW_MIN
-        )
-      ) || DEFAULT_WINDOW_MIN_ML,
-
-    maxMl:
-      Number(
-        localStorage.getItem(
-          STORAGE_WINDOW_MAX
-        )
-      ) || DEFAULT_WINDOW_MAX_ML
-
-  },
-
-  notifications: [],
-
-  serial: {
-
-    port: null,
-
-    reader: null,
-
-    connected: false
-
-  },
-
-  fluidRows:
-    loadFluidRows(),
-
-  lastSensorTotal:
-    sessionStorage.getItem(
-      SESSION_LAST_SENSOR
-    ) !== null
-
-      ? Number(
-          sessionStorage.getItem(
-            SESSION_LAST_SENSOR
-          )
-        )
-
-      : null,
-
-  liveSource:
-    'Waiting for live feed'
-
-};
+];
 
 
 const titles = {
+
+  patients:
+    'Ward 5A patients',
 
   scan:
     'Scan urinary bag',
@@ -129,7 +65,7 @@ const titles = {
     'Fluid balance chart',
 
   notifications:
-    'Alerts & notifications',
+    'Ward alerts',
 
   settings:
     'Settings'
@@ -145,32 +81,592 @@ const $ =
 
 
 /* =====================================
-   ALERT SOUNDS
+   PATIENT RECORD CREATION
 ===================================== */
 
-let audioContext = null;
+function createEmptyPatientRecord(
+  patient
+) {
 
-let audioEnabled = false;
+  return {
+
+    patientId:
+      patient.id,
+
+    patientName:
+      patient.name,
+
+    ward:
+      patient.ward,
+
+    bed:
+      patient.bed,
+
+    loggingDate:
+      null,
+
+    lastUpdated:
+      null,
+
+    monitoringActive:
+      false,
+
+    bag: {
+
+      id:
+        null,
+
+      capacityMl:
+        0,
+
+      deviceId:
+        null,
+
+      attachedAt:
+        null,
+
+      startSensorTotal:
+        0,
+
+      bagVolumeMl:
+        0,
+
+      sessionId:
+        null
+
+    },
+
+    reading: {
+
+      volume:
+        0,
+
+      pulses:
+        0,
+
+      turbidityRaw:
+        0,
+
+      vout:
+        0,
+
+      vin:
+        0,
+
+      clarity:
+        'UNKNOWN'
+
+    },
+
+    fluidRows:
+      [],
+
+    notifications:
+      [],
+
+    lastSensorTotal:
+      null
+
+  };
+
+}
 
 
-/*
-  Browser audio must be enabled
-  following a user click/tap.
-*/
+function normalisePatientRecord(
+  patient,
+  stored
+) {
+
+  const blank =
+    createEmptyPatientRecord(
+      patient
+    );
+
+
+  if (
+    !stored ||
+    typeof stored !==
+      'object'
+  ) {
+
+    return blank;
+
+  }
+
+
+  return {
+
+    ...blank,
+
+    ...stored,
+
+    patientId:
+      patient.id,
+
+    patientName:
+      patient.name,
+
+    ward:
+      patient.ward,
+
+    bed:
+      patient.bed,
+
+    /*
+      Monitoring must be explicitly
+      activated again by selecting the
+      patient and attaching the bag.
+    */
+
+    monitoringActive:
+      false,
+
+    bag: {
+
+      ...blank.bag,
+
+      ...(
+        stored.bag ||
+        {}
+      )
+
+    },
+
+    reading: {
+
+      ...blank.reading,
+
+      ...(
+        stored.reading ||
+        {}
+      )
+
+    },
+
+    fluidRows:
+
+      Array.isArray(
+        stored.fluidRows
+      )
+
+        ?
+
+        stored.fluidRows
+
+        :
+
+        [],
+
+    notifications:
+
+      Array.isArray(
+        stored.notifications
+      )
+
+        ?
+
+        stored.notifications
+
+        :
+
+        []
+
+  };
+
+}
+
+
+function loadPatientRecords() {
+
+  let stored =
+    {};
+
+
+  try {
+
+    stored =
+      JSON.parse(
+
+        localStorage.getItem(
+          STORAGE_PATIENT_RECORDS
+        )
+
+        ||
+
+        '{}'
+
+      );
+
+  } catch (
+    error
+  ) {
+
+    stored =
+      {};
+
+  }
+
+
+  const records =
+    {};
+
+
+  DEMO_PATIENTS
+    .forEach(
+      patient => {
+
+        records[
+          patient.id
+        ] =
+          normalisePatientRecord(
+
+            patient,
+
+            stored[
+              patient.id
+            ]
+
+          );
+
+      }
+    );
+
+
+  return records;
+
+}
+
+
+function savePatientRecords() {
+
+  localStorage.setItem(
+
+    STORAGE_PATIENT_RECORDS,
+
+    JSON.stringify(
+      state.patientRecords
+    )
+
+  );
+
+}
+
+
+/* =====================================
+   APPLICATION STATE
+===================================== */
+
+const state = {
+
+  loggedIn:
+    false,
+
+  currentView:
+    'patients',
+
+  selectedPatientId:
+    null,
+
+  patientRecords:
+    loadPatientRecords(),
+
+  liveReading: {
+
+    volume:
+      0,
+
+    pulses:
+      0,
+
+    turbidityRaw:
+      0,
+
+    vout:
+      0,
+
+    vin:
+      0,
+
+    clarity:
+      'UNKNOWN'
+
+  },
+
+  liveSource:
+    'Waiting for live feed',
+
+  urineLimits: {
+
+    minMl:
+
+      Number(
+        localStorage.getItem(
+          STORAGE_WINDOW_MIN
+        )
+      )
+
+      ||
+
+      DEFAULT_WINDOW_MIN_ML,
+
+    maxMl:
+
+      Number(
+        localStorage.getItem(
+          STORAGE_WINDOW_MAX
+        )
+      )
+
+      ||
+
+      DEFAULT_WINDOW_MAX_ML
+
+  },
+
+  serial: {
+
+    port:
+      null,
+
+    reader:
+      null,
+
+    connected:
+      false
+
+  }
+
+};
+
+
+/* =====================================
+   GENERAL HELPERS
+===================================== */
+
+function escapeHtml(
+  value
+) {
+
+  return String(
+    value ?? ''
+  )
+  .replace(
+
+    /[&<>'"]/g,
+
+    character => ({
+
+      '&':
+        '&amp;',
+
+      '<':
+        '&lt;',
+
+      '>':
+        '&gt;',
+
+      "'":
+        '&#39;',
+
+      '"':
+        '&quot;'
+
+    }[character])
+
+  );
+
+}
+
+
+function toast(
+  message
+) {
+
+  const element =
+    $('toast');
+
+
+  element.textContent =
+    message;
+
+
+  element.classList.add(
+    'show'
+  );
+
+
+  clearTimeout(
+    toast.timer
+  );
+
+
+  toast.timer =
+    setTimeout(
+
+      () =>
+        element
+          .classList
+          .remove(
+            'show'
+          ),
+
+      2200
+
+    );
+
+}
+
+
+function asNumber(
+  value
+) {
+
+  const number =
+    Number(
+      value
+    );
+
+
+  return Number.isFinite(
+    number
+  )
+
+    ?
+
+    number
+
+    :
+
+    0;
+
+}
+
+
+function getPatientById(
+  patientId
+) {
+
+  return DEMO_PATIENTS
+    .find(
+
+      patient =>
+        patient.id ===
+        patientId
+
+    )
+
+    ||
+
+    null;
+
+}
+
+
+function getSelectedPatient() {
+
+  return getPatientById(
+    state.selectedPatientId
+  );
+
+}
+
+
+function getSelectedRecord() {
+
+  if (
+    !state.selectedPatientId
+  ) {
+
+    return null;
+
+  }
+
+
+  return state.patientRecords[
+    state.selectedPatientId
+  ]
+
+  ||
+
+  null;
+
+}
+
+
+function patientContextText(
+  patient
+) {
+
+  if (
+    !patient
+  ) {
+
+    return '';
+
+  }
+
+
+  return (
+
+    `${patient.name} · ` +
+    `${patient.id} · ` +
+    `Bed ${patient.bed}`
+
+  );
+
+}
+
+
+function patientInitials(
+  name
+) {
+
+  return String(
+    name ||
+    ''
+  )
+  .split(
+    /\s+/
+  )
+  .filter(
+    Boolean
+  )
+  .map(
+    word =>
+      word[0]
+  )
+  .join('')
+  .slice(
+    0,
+    2
+  )
+  .toUpperCase();
+
+}
+
+
+/* =====================================
+   AUDIO
+===================================== */
+
+let audioContext =
+  null;
+
+let audioEnabled =
+  false;
+
+
 async function enableAlertSounds() {
 
   const AudioContextClass =
-    window.AudioContext ||
+    window.AudioContext
+    ||
     window.webkitAudioContext;
 
 
   if (
     !AudioContextClass
   ) {
-
-    console.warn(
-      'Web Audio API is not supported.'
-    );
 
     return false;
 
@@ -198,13 +694,6 @@ async function enableAlertSounds() {
 
     }
 
-
-    /*
-      Very small silent sound.
-
-      This helps unlock browser
-      audio after user interaction.
-    */
 
     const oscillator =
       audioContext
@@ -246,15 +735,6 @@ async function enableAlertSounds() {
       true;
 
 
-    console.log(
-
-      'Alert audio enabled:',
-
-      audioContext.state
-
-    );
-
-
     return true;
 
   } catch (
@@ -262,16 +742,8 @@ async function enableAlertSounds() {
   ) {
 
     console.error(
-
-      'Unable to enable alert audio:',
-
       error
-
     );
-
-
-    audioEnabled =
-      false;
 
 
     return false;
@@ -281,35 +753,19 @@ async function enableAlertSounds() {
 }
 
 
-/*
-  Create a single sound tone.
-*/
 function playTone(
-
   frequency,
-
-  startDelay,
-
+  delay,
   duration,
-
-  volume = 0.25,
-
-  type = 'sine'
-
+  volume,
+  type
 ) {
 
   if (
-    !audioContext
-
-    ||
-
+    !audioContext ||
     audioContext.state !==
       'running'
   ) {
-
-    console.warn(
-      'Audio context is not running.'
-    );
 
     return;
 
@@ -329,7 +785,7 @@ function playTone(
   const start =
     audioContext.currentTime
     +
-    startDelay;
+    delay;
 
 
   const end =
@@ -344,41 +800,29 @@ function playTone(
 
   oscillator.frequency
     .setValueAtTime(
-
       frequency,
-
       start
-
     );
 
 
   gain.gain
     .setValueAtTime(
-
       0.001,
-
       start
-
     );
 
 
   gain.gain
     .linearRampToValueAtTime(
-
       volume,
-
       start + 0.03
-
     );
 
 
   gain.gain
     .linearRampToValueAtTime(
-
       0.001,
-
       end
-
     );
 
 
@@ -405,22 +849,16 @@ function playTone(
 
 
 /*
-  BAG CAPACITY ALERT
-
-  Rising 3-note chime.
+  BAG ALERT SOUND:
+  rising chime
 */
+
 async function playBagAlertSound() {
 
   if (
     !audioEnabled
   ) {
 
-    console.warn(
-
-      'Bag alert sound cannot play because audio is not enabled.'
-
-    );
-
     return;
 
   }
@@ -437,69 +875,44 @@ async function playBagAlertSound() {
 
 
   playTone(
-
     440,
-
     0.00,
-
     0.25,
-
     0.30,
-
     'sine'
-
   );
 
 
   playTone(
-
     660,
-
     0.30,
-
     0.25,
-
     0.30,
-
     'sine'
-
   );
 
 
   playTone(
-
     880,
-
     0.60,
-
     0.40,
-
     0.32,
-
     'sine'
-
   );
 
 }
 
 
 /*
-  URINE OUTPUT ALERT
-
-  Clearly different urgent
-  high-low-high-low alarm.
+  URINE PRODUCTION ALERT:
+  urgent alternating alarm
 */
+
 async function playUrineAlertSound() {
 
   if (
     !audioEnabled
   ) {
-
-    console.warn(
-
-      'Urine alert sound cannot play because audio is not enabled.'
-
-    );
 
     return;
 
@@ -517,138 +930,38 @@ async function playUrineAlertSound() {
 
 
   playTone(
-
     950,
-
     0.00,
-
     0.20,
-
     0.35,
-
     'square'
-
   );
 
 
   playTone(
-
     620,
-
     0.25,
-
     0.20,
-
     0.35,
-
     'square'
-
   );
 
 
   playTone(
-
     950,
-
     0.50,
-
     0.20,
-
     0.35,
-
     'square'
-
   );
 
 
   playTone(
-
     620,
-
     0.75,
-
     0.30,
-
     0.35,
-
     'square'
-
-  );
-
-}
-
-
-/* =====================================
-   GENERAL
-===================================== */
-
-function toast(
-  message
-) {
-
-  const el =
-    $('toast');
-
-
-  el.textContent =
-    message;
-
-
-  el.classList.add(
-    'show'
-  );
-
-
-  clearTimeout(
-    toast.timer
-  );
-
-
-  toast.timer =
-    setTimeout(
-
-      () =>
-        el.classList.remove(
-          'show'
-        ),
-
-      2200
-
-    );
-
-}
-
-
-function escapeHtml(
-  value
-) {
-
-  return String(
-    value ?? ''
-  )
-  .replace(
-
-    /[&<>'"]/g,
-
-    character => ({
-
-      '&':
-        '&amp;',
-
-      '<':
-        '&lt;',
-
-      '>':
-        '&gt;',
-
-      "'":
-        '&#39;',
-
-      '"':
-        '&quot;'
-
-    }[character])
-
   );
 
 }
@@ -659,12 +972,6 @@ function escapeHtml(
 ===================================== */
 
 async function login() {
-
-  /*
-    Because login is initiated from
-    a button click, this is the best
-    place to unlock browser audio.
-  */
 
   await enableAlertSounds();
 
@@ -688,7 +995,7 @@ async function login() {
 
 
   showView(
-    'scan'
+    'patients'
   );
 
 }
@@ -699,8 +1006,44 @@ async function login() {
 ===================================== */
 
 function showView(
-  name
+  requestedView
 ) {
+
+  let name =
+    requestedView;
+
+
+  const patientRequiredViews =
+    new Set(
+      [
+        'scan',
+        'patient',
+        'dashboard',
+        'chart'
+      ]
+    );
+
+
+  if (
+    patientRequiredViews.has(
+      name
+    )
+
+    &&
+
+    !state.selectedPatientId
+  ) {
+
+    toast(
+      'Select a patient first'
+    );
+
+
+    name =
+      'patients';
+
+  }
+
 
   state.currentView =
     name;
@@ -748,9 +1091,43 @@ function showView(
 
   $('page-title')
     .textContent =
-      titles[name]
+      titles[
+        name
+      ]
+
       ||
+
       'Smart Urine Monitoring';
+
+
+  if (
+    name ===
+    'patients'
+  ) {
+
+    renderPatientSelection();
+
+  }
+
+
+  if (
+    name ===
+    'scan'
+  ) {
+
+    updateSelectedPatientUi();
+
+  }
+
+
+  if (
+    name ===
+    'patient'
+  ) {
+
+    updatePatientDetails();
+
+  }
 
 
   if (
@@ -796,8 +1173,397 @@ function showView(
 
 
 /* =====================================
-   QR CODE / BAG
+   PATIENT SELECTION
 ===================================== */
+
+function totalUrineForPatient(
+  record
+) {
+
+  return record.fluidRows
+    .reduce(
+
+      (
+        total,
+        row
+      ) =>
+
+        total +
+        asNumber(
+          row.urine
+        ),
+
+      0
+
+    );
+
+}
+
+
+function renderPatientSelection() {
+
+  const container =
+    $('patient-selection-list');
+
+
+  if (
+    !container
+  ) {
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    DEMO_PATIENTS
+      .map(
+        patient => {
+
+          const record =
+            state.patientRecords[
+              patient.id
+            ];
+
+
+          const loggingDate =
+            record.loggingDate
+
+              ?
+
+              new Date(
+                record.loggingDate
+              )
+              .toLocaleString()
+
+              :
+
+              'Not started';
+
+
+          const bagText =
+            record.bag.id
+
+              ?
+
+              `${record.bag.id} · ` +
+              `${record.bag.capacityMl} mL`
+
+              :
+
+              'No bag attached';
+
+
+          const alertCount =
+            record.notifications.length;
+
+
+          const urineTotal =
+            totalUrineForPatient(
+              record
+            )
+            .toFixed(
+              1
+            );
+
+
+          return `
+
+            <div class="card patient-select-card">
+
+              <div class="patient-card-top">
+
+                <div class="avatar">
+
+                  ${
+                    escapeHtml(
+                      patientInitials(
+                        patient.name
+                      )
+                    )
+                  }
+
+                </div>
+
+
+                <div>
+
+                  <strong class="patient-name">
+
+                    ${
+                      escapeHtml(
+                        patient.name
+                      )
+                    }
+
+                  </strong>
+
+
+                  <p>
+
+                    ${
+                      escapeHtml(
+                        patient.id
+                      )
+                    }
+
+                    · Bed
+
+                    ${
+                      escapeHtml(
+                        patient.bed
+                      )
+                    }
+
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div class="patient-mini-details">
+
+                <div>
+
+                  <span>
+                    Logging started
+                  </span>
+
+                  <strong>
+                    ${
+                      escapeHtml(
+                        loggingDate
+                      )
+                    }
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    Urinary bag
+                  </span>
+
+                  <strong>
+                    ${
+                      escapeHtml(
+                        bagText
+                      )
+                    }
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    Recorded urine
+                  </span>
+
+                  <strong>
+                    ${urineTotal} mL
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    Alerts logged
+                  </span>
+
+                  <strong>
+                    ${alertCount}
+                  </strong>
+
+                </div>
+
+              </div>
+
+
+              <button
+                class="btn primary select-patient-button"
+                data-patient-id="${escapeHtml(patient.id)}"
+              >
+
+                Select ${escapeHtml(patient.name)}
+
+              </button>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join('');
+
+
+  container
+    .querySelectorAll(
+      '.select-patient-button'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+
+          'click',
+
+          () => {
+
+            selectPatient(
+              button.dataset.patientId
+            );
+
+          }
+
+        );
+
+      }
+    );
+
+}
+
+
+function selectPatient(
+  patientId
+) {
+
+  /*
+    Stop monitoring whichever
+    patient was previously active.
+  */
+
+  Object
+    .values(
+      state.patientRecords
+    )
+    .forEach(
+      record => {
+
+        record.monitoringActive =
+          false;
+
+      }
+    );
+
+
+  const patient =
+    getPatientById(
+      patientId
+    );
+
+
+  if (
+    !patient
+  ) {
+
+    return;
+
+  }
+
+
+  state.selectedPatientId =
+    patientId;
+
+
+  savePatientRecords();
+
+
+  updateSelectedPatientUi();
+
+
+  toast(
+    `${patient.name} selected`
+  );
+
+
+  showView(
+    'scan'
+  );
+
+}
+
+
+function updateSelectedPatientUi() {
+
+  const patient =
+    getSelectedPatient();
+
+
+  if (
+    !patient
+  ) {
+
+    return;
+
+  }
+
+
+  $('scan-patient-name')
+    .textContent =
+      patient.name;
+
+
+  $('scan-patient-details')
+    .textContent =
+
+      `${patient.id} · ` +
+      `Ward ${patient.ward.replace('Ward ', '')} · ` +
+      `Bed ${patient.bed}`;
+
+
+  const demoQr =
+    getDemoBagQr();
+
+
+  $('demo-qr-code-text')
+    .textContent =
+      demoQr ||
+      'Select a patient first';
+
+}
+
+
+/* =====================================
+   BAG QR
+===================================== */
+
+function getDemoBagQr() {
+
+  const patient =
+    getSelectedPatient();
+
+
+  if (
+    !patient
+  ) {
+
+    return null;
+
+  }
+
+
+  return (
+
+    `BAG=UB-${patient.id}-001|` +
+
+    `PATIENT=${patient.id}|` +
+
+    `DEVICE=NC-72X|` +
+
+    `CAPACITY_ML=200`
+
+  );
+
+}
+
 
 function parseBagQr(
   rawValue
@@ -850,15 +1616,10 @@ function parseBagQr(
           .trim();
 
 
-      if (
-        key &&
-        value
-      ) {
-
-        fields[key] =
-          value;
-
-      }
+      fields[
+        key
+      ] =
+        value;
 
     }
   );
@@ -886,10 +1647,7 @@ function parseBagQr(
   ) {
 
     throw new Error(
-
-      'Invalid urinary bag QR code: ' +
-      'BAG and CAPACITY_ML are required.'
-
+      'Invalid urinary bag QR code.'
     );
 
   }
@@ -901,13 +1659,11 @@ function parseBagQr(
       fields.BAG,
 
     patient:
-      fields.PATIENT
-      ||
-      'P-0001',
+      fields.PATIENT ||
+      null,
 
     device:
-      fields.DEVICE
-      ||
+      fields.DEVICE ||
       'Unknown device',
 
     capacityMl:
@@ -918,14 +1674,72 @@ function parseBagQr(
 }
 
 
+function completeDemoScan() {
+
+  const qr =
+    getDemoBagQr();
+
+
+  if (
+    !qr
+  ) {
+
+    toast(
+      'Select a patient first'
+    );
+
+
+    showView(
+      'patients'
+    );
+
+
+    return;
+
+  }
+
+
+  applyScannedBag(
+    qr,
+    'Demo QR'
+  );
+
+}
+
+
 function applyScannedBag(
-
   rawValue,
-
   sourceLabel =
     'QR scan'
-
 ) {
+
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
+
+
+  if (
+    !patient ||
+    !record
+  ) {
+
+    toast(
+      'Select a patient before scanning a bag'
+    );
+
+
+    showView(
+      'patients'
+    );
+
+
+    return false;
+
+  }
+
 
   try {
 
@@ -935,86 +1749,143 @@ function applyScannedBag(
       );
 
 
-    state.bag = {
+    /*
+      Safety check:
+      scanned patient must match
+      selected patient.
+    */
+
+    if (
+      bag.patient
+
+      &&
+
+      bag.patient !==
+        patient.id
+    ) {
+
+      const message =
+
+        `The scanned bag belongs to ` +
+        `${bag.patient}, but the selected ` +
+        `patient is ${patient.name} (${patient.id}).`;
+
+
+      $('scan-message')
+        .textContent =
+          message;
+
+
+      addNotificationForPatient(
+
+        patient.id,
+
+        `mismatch-${Date.now()}`,
+
+        'Patient / bag mismatch',
+
+        message,
+
+        'safety'
+
+      );
+
+
+      toast(
+        'Patient / bag mismatch'
+      );
+
+
+      return false;
+
+    }
+
+
+    const now =
+      new Date()
+        .toISOString();
+
+
+    record.loggingDate =
+      now;
+
+
+    record.lastUpdated =
+      now;
+
+
+    record.monitoringActive =
+      true;
+
+
+    record.bag = {
 
       id:
         bag.bag,
 
-      patientId:
-        bag.patient,
+      capacityMl:
+        bag.capacityMl,
 
       deviceId:
         bag.device,
 
-      capacityMl:
-        bag.capacityMl,
-
-
-      /*
-        Store Nesso value when
-        this bag is attached.
-
-        This lets a new bag start
-        at 0 mL even when the
-        Nesso counter is cumulative.
-      */
+      attachedAt:
+        now,
 
       startSensorTotal:
         Number(
-          state.reading.volume
-          ||
+          state.liveReading.volume ||
           0
         ),
 
+      bagVolumeMl:
+        0,
 
       sessionId:
-        `${bag.bag}-${Date.now()}`
+
+        `${patient.id}-` +
+        `${bag.bag}-` +
+        `${Date.now()}`
 
     };
 
 
-    state.scanned =
-      true;
+    /*
+      Baseline for this patient's
+      urine logging.
+    */
+
+    record.lastSensorTotal =
+      Number(
+        state.liveReading.volume ||
+        0
+      );
+
+
+    record.reading =
+      {
+        ...state.liveReading
+      };
+
+
+    savePatientRecords();
 
 
     $('scan-message')
       .textContent =
 
         `${sourceLabel}: ` +
-        `${bag.bag} linked. ` +
+        `${bag.bag} linked to ` +
+        `${patient.name}. ` +
         `Capacity ${bag.capacityMl} mL.`;
 
 
-    $('last-scan-time')
-      .textContent =
-
-        new Date()
-          .toLocaleTimeString(
-
-            [],
-
-            {
-
-              hour:
-                '2-digit',
-
-              minute:
-                '2-digit'
-
-            }
-
-          );
-
-
-    updateBagIdentityUi();
-
-
-    evaluateBagCapacity();
-
-
     toast(
-      'Urinary bag linked successfully'
+      `Bag attached to ${patient.name}`
     );
+
+
+    updatePatientDetails();
 
 
     setTimeout(
@@ -1038,8 +1909,7 @@ function applyScannedBag(
     $('scan-message')
       .textContent =
 
-        error.message
-        ||
+        error.message ||
         String(
           error
         );
@@ -1057,105 +1927,8 @@ function applyScannedBag(
 }
 
 
-function completeDemoScan() {
-
-  applyScannedBag(
-
-    DEMO_BAG_QR,
-
-    'Demo QR'
-
-  );
-
-}
-
-
-function updateBagIdentityUi() {
-
-  const bagId =
-    state.bag.id
-    ||
-    'Not scanned';
-
-
-  const patientId =
-    state.bag.patientId
-    ||
-    'P-0001';
-
-
-  const deviceId =
-    state.bag.deviceId
-    ||
-    'Not linked';
-
-
-  const capacity =
-
-    state.bag.capacityMl >
-    0
-
-      ?
-
-      state.bag.capacityMl
-
-      :
-
-      '—';
-
-
-  $('patient-id')
-    .textContent =
-      patientId;
-
-
-  $('patient-bag-id')
-    .textContent =
-      bagId;
-
-
-  $('patient-bag-capacity')
-    .textContent =
-      capacity;
-
-
-  $('patient-device-id')
-    .textContent =
-      deviceId;
-
-
-  $('dashboard-patient')
-    .textContent =
-      patientId;
-
-
-  $('dashboard-bag')
-    .textContent =
-
-      state.bag.id
-      ||
-      'NO BAG';
-
-
-  $('settings-bag-id')
-    .textContent =
-      bagId;
-
-
-  $('settings-bag-capacity')
-    .textContent =
-      capacity;
-
-
-  $('settings-patient-id')
-    .textContent =
-      patientId;
-
-}
-
-
 /* =====================================
-   QR CAMERA
+   CAMERA
 ===================================== */
 
 async function startCamera() {
@@ -1209,9 +1982,7 @@ async function startCamera() {
 
     $('scan-message')
       .textContent =
-
-        'Camera active. ' +
-        'Looking for a QR code…';
+        'Camera active. Looking for QR code…';
 
 
     if (
@@ -1223,9 +1994,7 @@ async function startCamera() {
         new BarcodeDetector({
 
           formats:
-            [
-              'qr_code'
-            ]
+            ['qr_code']
 
         });
 
@@ -1261,8 +2030,7 @@ async function startCamera() {
 
               applyScannedBag(
 
-                codes[0]
-                  .rawValue,
+                codes[0].rawValue,
 
                 'QR scan'
 
@@ -1276,10 +2044,6 @@ async function startCamera() {
           } catch (
             error
           ) {
-
-            /*
-              Continue scanning.
-            */
 
           }
 
@@ -1298,9 +2062,8 @@ async function startCamera() {
       $('scan-message')
         .textContent =
 
-          'Camera active, but this browser ' +
-          'does not support QR detection. ' +
-          'Use Demo QR.';
+          'Camera is active, but automatic QR ' +
+          'detection is unavailable. Use Demo QR.';
 
     }
 
@@ -1311,8 +2074,7 @@ async function startCamera() {
     $('scan-message')
       .textContent =
 
-        'Camera permission unavailable. ' +
-        'Use Demo QR.';
+        'Camera unavailable. Use Demo QR.';
 
 
     toast(
@@ -1364,17 +2126,141 @@ function stopCamera() {
 
 
 /* =====================================
-   BAG CAPACITY
+   PATIENT DETAILS
 ===================================== */
 
-function getCurrentBagVolume() {
+function updatePatientDetails() {
+
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
+
 
   if (
-    !state.bag.id
+    !patient ||
+    !record
+  ) {
 
-    ||
+    return;
 
-    !state.bag.capacityMl
+  }
+
+
+  $('patient-avatar')
+    .textContent =
+      patientInitials(
+        patient.name
+      );
+
+
+  $('patient-name')
+    .textContent =
+      patient.name;
+
+
+  $('patient-id')
+    .textContent =
+      patient.id;
+
+
+  $('patient-bed')
+    .textContent =
+      patient.bed;
+
+
+  $('patient-bed-detail')
+    .textContent =
+      patient.bed;
+
+
+  $('patient-ward')
+    .textContent =
+      patient.ward;
+
+
+  $('patient-bag-id')
+    .textContent =
+
+      record.bag.id
+      ||
+      'Not attached';
+
+
+  $('patient-bag-capacity')
+    .textContent =
+
+      record.bag.capacityMl
+      ||
+      '—';
+
+
+  $('patient-device-id')
+    .textContent =
+
+      record.bag.deviceId
+      ||
+      'Not linked';
+
+
+  $('patient-logging-date')
+    .textContent =
+
+      record.loggingDate
+
+        ?
+
+        new Date(
+          record.loggingDate
+        )
+        .toLocaleString()
+
+        :
+
+        'Not started';
+
+
+  const status =
+    $('patient-monitoring-status');
+
+
+  status.textContent =
+
+    record.monitoringActive
+
+      ?
+
+      'Monitoring'
+
+      :
+
+      'Not monitoring';
+
+
+  status.classList.toggle(
+
+    'success',
+
+    record.monitoringActive
+
+  );
+
+}
+
+
+/* =====================================
+   BAG VOLUME / CAPACITY
+===================================== */
+
+function getCurrentBagVolume(
+  record
+) {
+
+  if (
+    !record ||
+    !record.bag.id
   ) {
 
     return 0;
@@ -1382,62 +2268,80 @@ function getCurrentBagVolume() {
   }
 
 
-  const sensorTotal =
-    Number(
-      state.reading.volume
-      ||
-      0
-    );
-
-
-  let start =
-    Number(
-      state.bag.startSensorTotal
-      ||
-      0
-    );
-
+  /*
+    Only the actively monitored patient
+    uses the current Nesso value.
+  */
 
   if (
-    sensorTotal <
-    start
+    record.monitoringActive
+
+    &&
+
+    state.selectedPatientId ===
+      record.patientId
   ) {
 
-    start =
-      0;
+    const current =
+      Number(
+        state.liveReading.volume ||
+        0
+      );
 
 
-    state.bag.startSensorTotal =
-      0;
+    let start =
+      Number(
+        record.bag.startSensorTotal ||
+        0
+      );
+
+
+    /*
+      Handle Nesso counter reset.
+    */
+
+    if (
+      current <
+      start
+    ) {
+
+      start =
+        0;
+
+
+      record.bag.startSensorTotal =
+        0;
+
+    }
+
+
+    record.bag.bagVolumeMl =
+      Math.max(
+
+        0,
+
+        current -
+        start
+
+      );
 
   }
 
 
-  return Math.max(
-
-    0,
-
-    sensorTotal -
-    start
-
+  return asNumber(
+    record.bag.bagVolumeMl
   );
 
 }
 
 
-function getBagFillStatus() {
-
-  const capacity =
-    Number(
-      state.bag.capacityMl
-      ||
-      0
-    );
-
+function getBagFillStatus(
+  record
+) {
 
   if (
-    capacity <=
-    0
+    !record ||
+    !record.bag.capacityMl
   ) {
 
     return {
@@ -1449,10 +2353,10 @@ function getBagFillStatus() {
         'unknown',
 
       shortLabel:
-        'Bag not scanned',
+        'No bag',
 
       message:
-        'Scan the urinary bag to load its capacity.'
+        'No urinary bag is attached.'
 
     };
 
@@ -1460,15 +2364,24 @@ function getBagFillStatus() {
 
 
   const volume =
-    getCurrentBagVolume();
+    getCurrentBagVolume(
+      record
+    );
+
+
+  const capacity =
+    record.bag.capacityMl;
 
 
   const percentage =
+
     (
       volume /
       capacity
     )
+
     *
+
     100;
 
 
@@ -1489,9 +2402,8 @@ function getBagFillStatus() {
 
       message:
 
-        `Overflow risk: ` +
-        `${volume.toFixed(0)} mL recorded ` +
-        `in a ${capacity} mL bag.`
+        `${volume.toFixed(1)} mL is above ` +
+        `the ${capacity} mL bag capacity.`
 
     };
 
@@ -1514,9 +2426,7 @@ function getBagFillStatus() {
         'Full',
 
       message:
-
-        'Urinary bag has reached ' +
-        'full capacity. Replace the bag.'
+        'Urinary bag has reached full capacity.'
 
     };
 
@@ -1562,9 +2472,7 @@ function getBagFillStatus() {
         '75% full',
 
       message:
-
-        'Urinary bag is approximately ' +
-        'three-quarters full.'
+        'Urinary bag is approximately three-quarters full.'
 
     };
 
@@ -1587,9 +2495,7 @@ function getBagFillStatus() {
         'Half full',
 
       message:
-
-        'Urinary bag is approximately ' +
-        'half full.'
+        'Urinary bag is approximately half full.'
 
     };
 
@@ -1614,175 +2520,222 @@ function getBagFillStatus() {
 }
 
 
-function evaluateBagCapacity() {
+function evaluateBagCapacity(
+  record
+) {
 
   if (
-    !state.bag.id
-
-    ||
-
-    !state.bag.capacityMl
+    !record ||
+    !record.monitoringActive ||
+    !record.bag.id
   ) {
 
     return;
 
   }
+
+
+  const patient =
+    getPatientById(
+      record.patientId
+    );
 
 
   const status =
-    getBagFillStatus();
+    getBagFillStatus(
+      record
+    );
 
 
   const prefix =
-    state.bag.sessionId
-    ||
-    state.bag.id;
+    record.bag.sessionId;
 
 
-  let key =
-    null;
+  let newAlert =
+    false;
 
 
-  let title =
-    null;
+  const milestones =
+    [
+
+      {
+        level: 50,
+        key: '50',
+        title: 'Urinary bag half full',
+        message: 'Urinary bag has reached approximately 50% capacity.'
+      },
+
+      {
+        level: 75,
+        key: '75',
+        title: 'Urinary bag 75% full',
+        message: 'Urinary bag has reached approximately 75% capacity.'
+      },
+
+      {
+        level: 90,
+        key: '90',
+        title: 'Urinary bag nearly full',
+        message: 'Urinary bag has reached at least 90% capacity.'
+      },
+
+      {
+        level: 100,
+        key: '100',
+        title: 'Urinary bag full',
+        message: 'Urinary bag has reached full capacity. Replace the bag.'
+      }
+
+    ];
 
 
-  let message =
-    null;
+  milestones
+    .forEach(
+      milestone => {
+
+        if (
+          status.percentage >=
+          milestone.level
+        ) {
+
+          const added =
+            addNotificationForPatient(
+
+              record.patientId,
+
+              `${prefix}-bag-${milestone.key}`,
+
+              milestone.title,
+
+              milestone.message,
+
+              'bag'
+
+            );
+
+
+          if (
+            added
+          ) {
+
+            newAlert =
+              true;
+
+          }
+
+        }
+
+      }
+    );
 
 
   if (
-    status.level ===
-    'overflow'
+    status.percentage >
+    100
   ) {
 
-    key =
-      `${prefix}-bag-overflow`;
+    const added =
+      addNotificationForPatient(
+
+        record.patientId,
+
+        `${prefix}-overflow`,
+
+        'URGENT: Urinary bag overflow risk',
+
+        status.message,
+
+        'bag'
+
+      );
 
 
-    title =
-      'URGENT: Urinary bag overflow risk';
+    if (
+      added
+    ) {
 
+      newAlert =
+        true;
 
-    message =
-      status.message;
-
-  } else if (
-    status.level ===
-    'full'
-  ) {
-
-    key =
-      `${prefix}-bag-100`;
-
-
-    title =
-      'Urinary bag full';
-
-
-    message =
-      status.message;
-
-  } else if (
-    status.level ===
-    'nearly-full'
-  ) {
-
-    key =
-      `${prefix}-bag-90`;
-
-
-    title =
-      'Urinary bag nearly full';
-
-
-    message =
-      status.message;
-
-  } else if (
-    status.level ===
-    'three-quarter'
-  ) {
-
-    key =
-      `${prefix}-bag-75`;
-
-
-    title =
-      'Urinary bag 75% full';
-
-
-    message =
-      status.message;
-
-  } else if (
-    status.level ===
-    'half'
-  ) {
-
-    key =
-      `${prefix}-bag-50`;
-
-
-    title =
-      'Urinary bag half full';
-
-
-    message =
-      status.message;
+    }
 
   }
 
 
   if (
-    !key
+    newAlert
   ) {
 
-    return;
+    let title =
+      'Urinary bag alert';
 
-  }
+
+    if (
+      status.level ===
+      'overflow'
+    ) {
+
+      title =
+        'URGENT: Urinary bag overflow risk';
+
+    } else if (
+      status.level ===
+      'full'
+    ) {
+
+      title =
+        'Urinary bag full';
+
+    } else if (
+      status.level ===
+      'nearly-full'
+    ) {
+
+      title =
+        'Urinary bag nearly full';
+
+    } else if (
+      status.level ===
+      'three-quarter'
+    ) {
+
+      title =
+        'Urinary bag 75% full';
+
+    } else if (
+      status.level ===
+      'half'
+    ) {
+
+      title =
+        'Urinary bag half full';
+
+    }
 
 
-  const added =
-    addNotification(
+    showMainAlertForPatient(
 
-      key,
+      patient,
 
       title,
 
-      message,
-
-      'bag'
+      status.message
 
     );
 
-
-  if (
-    added
-  ) {
-
-    showMainAlert(
-
-      title,
-
-      message
-
-    );
-
-
-    /*
-      BAG sound.
-    */
 
     playBagAlertSound();
 
   }
 
+
+  savePatientRecords();
+
 }
 
 
 /* =====================================
-   SENSOR DATA
+   SENSOR READING
 ===================================== */
 
 function normalizeReading(
@@ -1790,12 +2743,9 @@ function normalizeReading(
 ) {
 
   if (
-    !input
-
-    ||
-
+    !input ||
     typeof input !==
-    'object'
+      'object'
   ) {
 
     return null;
@@ -1807,17 +2757,11 @@ function normalizeReading(
     Number(
 
       input.volume
-
       ??
-
       input.volume_ml
-
       ??
-
       input.totalVolumeMl
-
       ??
-
       input.total_volume_ml
 
     );
@@ -1838,99 +2782,68 @@ function normalizeReading(
 
     volume,
 
-
     pulses:
 
       Number(
 
         input.pulses
-
         ??
-
         input.pulseCount
-
         ??
-
         input.pulse_count
-
         ??
-
         0
 
       ),
-
 
     turbidityRaw:
 
       Number(
 
         input.turbidityRaw
-
         ??
-
         input.turbidity_raw
-
         ??
-
         input.raw
-
         ??
-
         0
 
       ),
-
 
     vout:
 
       Number(
 
         input.vout
-
         ??
-
         input.Vout
-
         ??
-
         0
 
       ),
-
 
     vin:
 
       Number(
 
         input.vin
-
         ??
-
         input.Vin
-
         ??
-
         input.turbidity_v
-
         ??
-
         0
 
       ),
-
 
     clarity:
 
       String(
 
         input.clarity
-
         ??
-
         input.status
-
         ??
-
         'UNKNOWN'
 
       )
@@ -1942,12 +2855,9 @@ function normalizeReading(
 
 
 function acceptLiveReading(
-
   input,
-
   source =
     'Live feed'
-
 ) {
 
   const reading =
@@ -1965,7 +2875,11 @@ function acceptLiveReading(
   }
 
 
-  state.reading =
+  /*
+    Global physical Nesso reading.
+  */
+
+  state.liveReading =
     reading;
 
 
@@ -1973,56 +2887,88 @@ function acceptLiveReading(
     source;
 
 
-  $('feed-time')
-    .textContent =
-
-      new Date()
-        .toLocaleTimeString(
-
-          [],
-
-          {
-
-            hour:
-              '2-digit',
-
-            minute:
-              '2-digit',
-
-            second:
-              '2-digit'
-
-          }
-
-        );
-
-
-  $('connection-pill')
-    .textContent =
-      source;
-
-
-  $('connection-pill')
-    .classList
-    .add(
-      'success'
-    );
-
-
   $('settings-source')
     .textContent =
       source;
 
 
-  processWindowSensorVolume(
-    reading.volume
-  );
+  if (
+    $('feed-time')
+  ) {
+
+    $('feed-time')
+      .textContent =
+
+        new Date()
+          .toLocaleTimeString(
+
+            [],
+
+            {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            }
+
+          );
+
+  }
 
 
-  evaluateBagCapacity();
+  const record =
+    getSelectedRecord();
 
 
-  updateDashboard();
+  /*
+    Only attribute sensor data to the
+    selected patient after a bag has
+    actually been attached.
+  */
+
+  if (
+    record &&
+    record.monitoringActive &&
+    record.bag.id
+  ) {
+
+    record.reading =
+      {
+        ...reading
+      };
+
+
+    record.lastUpdated =
+      new Date()
+        .toISOString();
+
+
+    processWindowSensorVolume(
+
+      record,
+
+      reading.volume
+
+    );
+
+
+    evaluateBagCapacity(
+      record
+    );
+
+
+    savePatientRecords();
+
+  }
+
+
+  if (
+    state.currentView ===
+    'dashboard'
+  ) {
+
+    updateDashboard();
+
+  }
 
 
   if (
@@ -2040,456 +2986,8 @@ function acceptLiveReading(
 }
 
 
-function parsePrototypeLine(
-  line
-) {
-
-  const clean =
-    String(
-      line
-      ||
-      ''
-    )
-    .trim();
-
-
-  if (
-    !clean
-  ) {
-
-    return false;
-
-  }
-
-
-  const parts =
-    clean
-      .split(
-        ','
-      )
-      .map(
-
-        value =>
-          value.trim()
-
-      );
-
-
-  if (
-    parts.length >=
-    7
-  ) {
-
-    const [
-
-      timeMs,
-
-      volume,
-
-      pulses,
-
-      raw,
-
-      vout,
-
-      vin,
-
-      status
-
-    ] =
-      parts;
-
-
-    const numbers =
-      [
-
-        volume,
-
-        pulses,
-
-        raw,
-
-        vout,
-
-        vin
-
-      ]
-      .map(
-        Number
-      );
-
-
-    if (
-      !numbers.some(
-        Number.isNaN
-      )
-    ) {
-
-      return acceptLiveReading(
-
-        {
-
-          volume:
-            numbers[0],
-
-          pulses:
-            numbers[1],
-
-          turbidityRaw:
-            numbers[2],
-
-          vout:
-            numbers[3],
-
-          vin:
-            numbers[4],
-
-          clarity:
-            status
-
-        },
-
-        'Nesso N1 Web Serial'
-
-      );
-
-    }
-
-  }
-
-
-  return false;
-
-}
-
-
 /* =====================================
-   DIRECT WEB SERIAL
-===================================== */
-
-async function connectSerial() {
-
-  await enableAlertSounds();
-
-
-  if (
-    !(
-      'serial'
-      in navigator
-    )
-  ) {
-
-    $('serial-status')
-      .textContent =
-
-        'Web Serial unavailable. ' +
-        'Use desktop Chrome/Edge ' +
-        'or use the separate Sensor Logger.';
-
-
-    return;
-
-  }
-
-
-  try {
-
-    state.serial.port =
-      await navigator
-        .serial
-        .requestPort();
-
-
-    await state.serial.port
-      .open({
-
-        baudRate:
-          115200
-
-      });
-
-
-    state.serial.connected =
-      true;
-
-
-    state.liveSource =
-      'Nesso N1 Web Serial';
-
-
-    $('settings-source')
-      .textContent =
-        state.liveSource;
-
-
-    const decoder =
-      new TextDecoderStream();
-
-
-    state.serial.port
-      .readable
-      .pipeTo(
-        decoder.writable
-      );
-
-
-    state.serial.reader =
-      decoder
-        .readable
-        .getReader();
-
-
-    let buffer =
-      '';
-
-
-    while (
-      state.serial.connected
-    ) {
-
-      const {
-
-        value,
-
-        done
-
-      } =
-        await state.serial
-          .reader
-          .read();
-
-
-      if (
-        done
-      ) {
-
-        break;
-
-      }
-
-
-      buffer +=
-        value
-        ||
-        '';
-
-
-      const lines =
-        buffer.split(
-          /\r?\n/
-        );
-
-
-      buffer =
-        lines.pop();
-
-
-      lines.forEach(
-        parsePrototypeLine
-      );
-
-    }
-
-  } catch (
-    error
-  ) {
-
-    $('serial-status')
-      .textContent =
-
-        `Serial connection not completed: ` +
-        `${error.message || error}`;
-
-  }
-
-}
-
-
-/* =====================================
-   DEMO SENSOR READING
-===================================== */
-
-function simulateReading() {
-
-  /*
-    Every click represents
-    +25 mL.
-  */
-
-  if (
-    state.lastSensorTotal ===
-    null
-
-    ||
-
-    !Number.isFinite(
-      state.lastSensorTotal
-    )
-  ) {
-
-    state.lastSensorTotal =
-      Number(
-        state.reading.volume
-        ||
-        0
-      );
-
-
-    sessionStorage.setItem(
-
-      SESSION_LAST_SENSOR,
-
-      String(
-        state.lastSensorTotal
-      )
-
-    );
-
-  }
-
-
-  acceptLiveReading(
-
-    {
-
-      volume:
-
-        Number(
-          state.reading.volume
-          ||
-          0
-        )
-
-        +
-
-        25,
-
-
-      pulses:
-
-        Number(
-          state.reading.pulses
-          ||
-          0
-        )
-
-        +
-
-        112,
-
-
-      turbidityRaw:
-
-        1720
-
-        +
-
-        Math.floor(
-
-          Math.random()
-          *
-          40
-
-        ),
-
-
-      vout:
-
-        1.36
-
-        +
-
-        Math.random()
-        *
-        0.06,
-
-
-      vin:
-
-        2.04
-
-        +
-
-        Math.random()
-        *
-        0.09,
-
-
-      clarity:
-        'CLOUDY'
-
-    },
-
-
-    'Demo feed'
-
-  );
-
-}
-
-
-/* =====================================
-   STORAGE
-===================================== */
-
-function loadFluidRows() {
-
-  try {
-
-    const rows =
-      JSON.parse(
-
-        localStorage.getItem(
-          STORAGE_ROWS
-        )
-
-        ||
-
-        '[]'
-
-      );
-
-
-    return Array.isArray(
-      rows
-    )
-
-      ?
-
-      rows
-
-      :
-
-      [];
-
-  } catch (
-    error
-  ) {
-
-    return [];
-
-  }
-
-}
-
-
-function saveFluidRows() {
-
-  localStorage.setItem(
-
-    STORAGE_ROWS,
-
-    JSON.stringify(
-      state.fluidRows
-    )
-
-  );
-
-}
-
-
-/* =====================================
-   3-MINUTE MONITORING WINDOWS
+   3-MINUTE TIME WINDOWS
 ===================================== */
 
 function windowKey(
@@ -2503,7 +3001,7 @@ function windowKey(
     );
 
 
-  const bucketStartMinute =
+  const startMinute =
 
     Math.floor(
 
@@ -2519,13 +3017,9 @@ function windowKey(
 
 
   current.setMinutes(
-
-    bucketStartMinute,
-
+    startMinute,
     0,
-
     0
-
   );
 
 
@@ -2559,89 +3053,62 @@ function windowLabel(
 
       *
 
-      60
-
-      *
-
-      1000
+      60000
 
     );
 
 
-  const format =
+  const display =
     date =>
 
       `${String(
         date.getHours()
-      )
-      .padStart(
-        2,
-        '0'
-      )}:` +
+      ).padStart(2, '0')}:` +
 
       `${String(
         date.getMinutes()
-      )
-      .padStart(
-        2,
-        '0'
-      )}`;
+      ).padStart(2, '0')}`;
 
 
   return (
 
-    `${format(start)}`
-
-    +
-
-    `–`
-
-    +
-
-    `${format(end)}`
+    `${display(start)}` +
+    `–` +
+    `${display(end)}`
 
   );
 
 }
 
 
-function makeRow(
-  key =
-    windowKey()
+function makeFluidRow(
+  key
 ) {
 
   return {
 
     key,
 
-
     oral:
       '',
-
 
     ivFluids:
       '',
 
-
     ivMeds:
       '',
-
 
     urine:
       0,
 
-
     drain:
       '',
-
 
     vomit:
       '',
 
-
     initials:
       '',
-
 
     sensorSeen:
       false
@@ -2651,18 +3118,20 @@ function makeRow(
 }
 
 
-function getOrCreateCurrentRow() {
+function getOrCreateCurrentRow(
+  record
+) {
 
   const key =
     windowKey();
 
 
   let row =
-    state.fluidRows
+    record.fluidRows
       .find(
 
-        current =>
-          current.key ===
+        item =>
+          item.key ===
           key
 
       );
@@ -2673,18 +3142,18 @@ function getOrCreateCurrentRow() {
   ) {
 
     row =
-      makeRow(
+      makeFluidRow(
         key
       );
 
 
-    state.fluidRows
+    record.fluidRows
       .push(
         row
       );
 
 
-    state.fluidRows
+    record.fluidRows
       .sort(
 
         (
@@ -2705,7 +3174,7 @@ function getOrCreateCurrentRow() {
       );
 
 
-    saveFluidRows();
+    savePatientRecords();
 
   }
 
@@ -2715,36 +3184,12 @@ function getOrCreateCurrentRow() {
 }
 
 
-function asNumber(
-  value
-) {
-
-  const number =
-    Number(
-      value
-    );
-
-
-  return Number.isFinite(
-    number
-  )
-
-    ?
-
-    number
-
-    :
-
-    0;
-
-}
-
-
 /* =====================================
    AUTOMATIC URINE LOGGING
 ===================================== */
 
 function processWindowSensorVolume(
+  record,
   cumulativeVolume
 ) {
 
@@ -2771,52 +3216,33 @@ function processWindowSensorVolume(
 
 
   const row =
-    getOrCreateCurrentRow();
+    getOrCreateCurrentRow(
+      record
+    );
 
 
   row.sensorSeen =
     true;
 
 
-  /*
-    First live reading becomes
-    the baseline.
-
-    Old cumulative readings are
-    therefore not added to the
-    current 3-minute window.
-  */
-
   if (
-    state.lastSensorTotal ===
+    record.lastSensorTotal ===
     null
 
     ||
 
     !Number.isFinite(
-      state.lastSensorTotal
+      Number(
+        record.lastSensorTotal
+      )
     )
   ) {
 
-    state.lastSensorTotal =
+    record.lastSensorTotal =
       current;
 
 
-    sessionStorage.setItem(
-
-      SESSION_LAST_SENSOR,
-
-      String(
-        current
-      )
-
-    );
-
-
-    saveFluidRows();
-
-
-    evaluateCompletedWindows();
+    savePatientRecords();
 
 
     return;
@@ -2825,14 +3251,16 @@ function processWindowSensorVolume(
 
 
   const previous =
-    state.lastSensorTotal;
+    Number(
+      record.lastSensorTotal
+    );
 
 
   let delta;
 
 
   /*
-    Detect Nesso reset.
+    Nesso counter reset.
   */
 
   if (
@@ -2845,16 +3273,17 @@ function processWindowSensorVolume(
       current;
 
 
-    addNotification(
+    addNotificationForPatient(
 
-      `nesso-reset-${Date.now()}`,
+      record.patientId,
 
-      'Nesso N1 volume counter reset',
+      `sensor-reset-${Date.now()}`,
 
-      'A lower cumulative sensor value was received. ' +
-      'Monitoring continued from the new counter.',
+      'Nesso counter reset',
 
-      'window'
+      'A lower cumulative sensor reading was received. Monitoring continued from the new counter.',
+
+      'safety'
 
     );
 
@@ -2867,25 +3296,9 @@ function processWindowSensorVolume(
   }
 
 
-  state.lastSensorTotal =
+  record.lastSensorTotal =
     current;
 
-
-  sessionStorage.setItem(
-
-    SESSION_LAST_SENSOR,
-
-    String(
-      current
-    )
-
-  );
-
-
-  /*
-    Only NEW urine volume
-    is added to the 3-minute row.
-  */
 
   if (
     delta >
@@ -2902,15 +3315,11 @@ function processWindowSensorVolume(
       Math.round(
 
         (
-
           asNumber(
             row.urine
           )
-
           +
-
           delta
-
         )
 
         *
@@ -2926,15 +3335,16 @@ function processWindowSensorVolume(
   }
 
 
-  saveFluidRows();
+  savePatientRecords();
 
 
   /*
-    High output:
-    check immediately.
+    High output can alert immediately.
   */
 
   evaluateUrineWindow(
+
+    record,
 
     row,
 
@@ -2944,33 +3354,31 @@ function processWindowSensorVolume(
 
 
   /*
-    Low output:
-    check completed windows.
+    Low output is checked for
+    completed windows.
   */
 
-  evaluateCompletedWindows();
+  evaluateCompletedWindowsForRecord(
+    record
+  );
 
 }
 
 
 /* =====================================
-   3-MINUTE URINE THRESHOLDS
+   URINE PRODUCTION ALERTS
 ===================================== */
 
 function evaluateUrineWindow(
-
+  record,
   row,
-
   windowCompleted =
     false
-
 ) {
 
   if (
-    !row
-
-    ||
-
+    !record ||
+    !row ||
     !row.sensorSeen
   ) {
 
@@ -2979,21 +3387,27 @@ function evaluateUrineWindow(
   }
 
 
+  const patient =
+    getPatientById(
+      record.patientId
+    );
+
+
   const urine =
     asNumber(
       row.urine
     );
 
 
-  const min =
+  const minimum =
     state.urineLimits.minMl;
 
 
-  const max =
+  const maximum =
     state.urineLimits.maxMl;
 
 
-  const label =
+  const time =
     windowLabel(
       row.key
     );
@@ -3001,37 +3415,33 @@ function evaluateUrineWindow(
 
   /*
     HIGH URINE OUTPUT
-
-    > 150 mL in 3 minutes.
-
-    This can trigger immediately.
   */
 
   if (
     urine >
-    max
+    maximum
   ) {
 
     const message =
 
-      `${label}: ` +
-      `${urine.toFixed(1)} mL ` +
-      `has been recorded. ` +
-      `Upper ${MONITORING_WINDOW_MINUTES}-minute ` +
-      `threshold is ${max} mL.`;
+      `${urine.toFixed(1)} mL was recorded ` +
+      `during ${time}. ` +
+      `The configured upper limit is ` +
+      `${maximum} mL / 3 min.`;
 
 
     const added =
-      addNotification(
+      addNotificationForPatient(
 
-        `window-high-${row.key}-${max}`,
+        record.patientId,
 
-        `High urine output in ` +
-        `${MONITORING_WINDOW_MINUTES}-minute window`,
+        `high-${row.key}-${maximum}`,
+
+        'High urine output',
 
         message,
 
-        'window'
+        'urine'
 
       );
 
@@ -3040,19 +3450,16 @@ function evaluateUrineWindow(
       added
     ) {
 
-      showMainAlert(
+      showMainAlertForPatient(
 
-        `High urine output in ` +
-        `${MONITORING_WINDOW_MINUTES}-minute window`,
+        patient,
+
+        'High urine output',
 
         message
 
       );
 
-
-      /*
-        URINE alert sound.
-      */
 
       playUrineAlertSound();
 
@@ -3064,8 +3471,8 @@ function evaluateUrineWindow(
   /*
     LOW URINE OUTPUT
 
-    < 50 mL once 3 minutes
-    have finished.
+    Only after the 3-minute
+    window finishes.
   */
 
   if (
@@ -3074,29 +3481,29 @@ function evaluateUrineWindow(
     &&
 
     urine <
-    min
+    minimum
   ) {
 
     const message =
 
-      `${label}: ` +
-      `${urine.toFixed(1)} mL ` +
-      `was recorded. ` +
-      `Lower ${MONITORING_WINDOW_MINUTES}-minute ` +
-      `threshold is ${min} mL.`;
+      `${urine.toFixed(1)} mL was recorded ` +
+      `during ${time}. ` +
+      `The configured lower limit is ` +
+      `${minimum} mL / 3 min.`;
 
 
     const added =
-      addNotification(
+      addNotificationForPatient(
 
-        `window-low-${row.key}-${min}`,
+        record.patientId,
 
-        `Low urine output in ` +
-        `${MONITORING_WINDOW_MINUTES}-minute window`,
+        `low-${row.key}-${minimum}`,
+
+        'Low urine output',
 
         message,
 
-        'window'
+        'urine'
 
       );
 
@@ -3105,20 +3512,16 @@ function evaluateUrineWindow(
       added
     ) {
 
-      showMainAlert(
+      showMainAlertForPatient(
 
-        `Low urine output in ` +
-        `${MONITORING_WINDOW_MINUTES}-minute window`,
+        patient,
+
+        'Low urine output',
 
         message
 
       );
 
-
-      /*
-        Same urine-production alarm
-        for both low and high output.
-      */
 
       playUrineAlertSound();
 
@@ -3129,19 +3532,21 @@ function evaluateUrineWindow(
 }
 
 
-function evaluateCompletedWindows() {
+function evaluateCompletedWindowsForRecord(
+  record
+) {
 
-  const currentWindow =
+  const currentKey =
     windowKey();
 
 
-  state.fluidRows
+  record.fluidRows
     .forEach(
       row => {
 
         if (
           row.key !==
-          currentWindow
+          currentKey
 
           &&
 
@@ -3149,6 +3554,8 @@ function evaluateCompletedWindows() {
         ) {
 
           evaluateUrineWindow(
+
+            record,
 
             row,
 
@@ -3164,32 +3571,57 @@ function evaluateCompletedWindows() {
 }
 
 
-function getCurrentWindowRow() {
+function evaluateAllPatientCompletedWindows() {
 
-  return (
+  Object
+    .values(
+      state.patientRecords
+    )
+    .forEach(
+      record => {
 
-    state.fluidRows
-      .find(
+        evaluateCompletedWindowsForRecord(
+          record
+        );
 
-        row =>
-          row.key ===
-          windowKey()
-
-      )
-
-    ||
-
-    getOrCreateCurrentRow()
-
-  );
+      }
+    );
 
 }
 
 
-function getCurrentWindowStatus() {
+/* =====================================
+   CURRENT WINDOW STATUS
+===================================== */
+
+function getCurrentWindowStatus(
+  record
+) {
+
+  if (
+    !record
+  ) {
+
+    return {
+
+      value:
+        0,
+
+      label:
+        'No patient selected',
+
+      level:
+        'unknown'
+
+    };
+
+  }
+
 
   const row =
-    getCurrentWindowRow();
+    getOrCreateCurrentRow(
+      record
+    );
 
 
   const urine =
@@ -3198,19 +3630,14 @@ function getCurrentWindowStatus() {
     );
 
 
-  const min =
-    state.urineLimits.minMl;
-
-
-  const max =
-    state.urineLimits.maxMl;
-
-
   if (
     !row.sensorSeen
   ) {
 
     return {
+
+      value:
+        urine,
 
       label:
         'Waiting for sensor',
@@ -3225,10 +3652,13 @@ function getCurrentWindowStatus() {
 
   if (
     urine >
-    max
+    state.urineLimits.maxMl
   ) {
 
     return {
+
+      value:
+        urine,
 
       label:
         'Above upper threshold',
@@ -3241,18 +3671,15 @@ function getCurrentWindowStatus() {
   }
 
 
-  /*
-    During the active 3 minutes,
-    being below 50 is not yet
-    a low-output alert.
-  */
-
   if (
     urine <
-    min
+    state.urineLimits.minMl
   ) {
 
     return {
+
+      value:
+        urine,
 
       label:
         'Below lower threshold so far',
@@ -3267,6 +3694,9 @@ function getCurrentWindowStatus() {
 
   return {
 
+    value:
+      urine,
+
     label:
       'Within configured range',
 
@@ -3278,109 +3708,315 @@ function getCurrentWindowStatus() {
 }
 
 
-function saveWindowThresholds(
+/* =====================================
+   ALERT STORAGE
+===================================== */
 
-  minValue,
-
-  maxValue
-
+function addNotificationForPatient(
+  patientId,
+  key,
+  title,
+  message,
+  type
 ) {
 
-  const min =
-    Number(
-      minValue
+  const patient =
+    getPatientById(
+      patientId
     );
 
 
-  const max =
-    Number(
-      maxValue
-    );
+  const record =
+    state.patientRecords[
+      patientId
+    ];
 
 
   if (
-    !Number.isFinite(
-      min
-    )
-
-    ||
-
-    !Number.isFinite(
-      max
-    )
-
-    ||
-
-    min <
-    0
-
-    ||
-
-    max <=
-    min
+    !patient ||
+    !record
   ) {
-
-    toast(
-      'Check the monitoring threshold values'
-    );
-
 
     return false;
 
   }
 
 
-  state.urineLimits.minMl =
-    min;
+  const exists =
+    record.notifications
+      .some(
+
+        notification =>
+          notification.key ===
+          key
+
+      );
 
 
-  state.urineLimits.maxMl =
-    max;
+  if (
+    exists
+  ) {
+
+    return false;
+
+  }
 
 
-  localStorage.setItem(
+  record.notifications
+    .unshift({
 
-    STORAGE_WINDOW_MIN,
+      key,
 
-    String(
-      min
-    )
+      patientId:
+        patient.id,
 
-  );
+      patientName:
+        patient.name,
 
+      ward:
+        patient.ward,
 
-  localStorage.setItem(
+      bed:
+        patient.bed,
 
-    STORAGE_WINDOW_MAX,
+      title,
 
-    String(
-      max
-    )
+      message,
 
-  );
+      type,
 
+      time:
+        new Date()
+          .toISOString()
 
-  toast(
-
-    `${MONITORING_WINDOW_MINUTES}-minute range saved: ` +
-    `${min}–${max} mL`
-
-  );
-
-
-  evaluateUrineWindow(
-
-    getCurrentWindowRow(),
-
-    false
-
-  );
+    });
 
 
-  updateDashboard();
+  savePatientRecords();
+
+
+  updateNotificationDot();
+
+
+  if (
+    state.currentView ===
+    'notifications'
+  ) {
+
+    renderNotifications();
+
+  }
 
 
   return true;
+
+}
+
+
+function getAllWardNotifications() {
+
+  return Object
+    .values(
+      state.patientRecords
+    )
+    .flatMap(
+
+      record =>
+        record.notifications
+
+    )
+    .sort(
+
+      (
+        a,
+        b
+      ) =>
+
+        new Date(
+          b.time
+        )
+
+        -
+
+        new Date(
+          a.time
+        )
+
+    );
+
+}
+
+
+function updateNotificationDot() {
+
+  const notifications =
+    getAllWardNotifications();
+
+
+  $('notification-dot')
+    .classList
+    .toggle(
+
+      'hidden',
+
+      notifications.length ===
+      0
+
+    );
+
+}
+
+
+function renderNotifications() {
+
+  const list =
+    $('notification-list');
+
+
+  const notifications =
+    getAllWardNotifications();
+
+
+  if (
+    !notifications.length
+  ) {
+
+    list.innerHTML = `
+
+      <div class="empty-state">
+
+        <div>
+          🔔
+        </div>
+
+        <strong>
+          No Ward 5A alerts
+        </strong>
+
+        <p>
+          Bag-capacity and urine-output
+          alerts for Aisha Rahman and
+          John Miller will appear here.
+        </p>
+
+      </div>
+
+    `;
+
+
+    return;
+
+  }
+
+
+  list.innerHTML =
+    notifications
+      .map(
+        notification => `
+
+          <div
+            class="
+              card
+              notification-card
+              ${escapeHtml(notification.type)}
+            "
+          >
+
+            <div class="alert-patient-label">
+
+              <strong>
+
+                ${escapeHtml(notification.patientName)}
+
+              </strong>
+
+
+              <span>
+
+                ${escapeHtml(notification.patientId)}
+                · Bed
+                ${escapeHtml(notification.bed)}
+
+              </span>
+
+            </div>
+
+
+            <strong>
+
+              ${escapeHtml(notification.title)}
+
+            </strong>
+
+
+            <p>
+
+              ${escapeHtml(notification.message)}
+
+            </p>
+
+
+            <time>
+
+              ${
+                new Date(
+                  notification.time
+                )
+                .toLocaleString()
+              }
+
+            </time>
+
+          </div>
+
+        `
+      )
+      .join('');
+
+}
+
+
+/* =====================================
+   MAIN ALERT BANNER
+===================================== */
+
+function showMainAlertForPatient(
+  patient,
+  title,
+  message
+) {
+
+  if (
+    !patient
+  ) {
+
+    return;
+
+  }
+
+
+  $('alert-banner')
+    .classList
+    .remove(
+      'hidden'
+    );
+
+
+  $('alert-patient-context')
+    .textContent =
+      patientContextText(
+        patient
+      );
+
+
+  $('alert-title')
+    .textContent =
+      title;
+
+
+  $('alert-message')
+    .textContent =
+      message;
 
 }
 
@@ -3391,36 +4027,95 @@ function saveWindowThresholds(
 
 function updateDashboard() {
 
-  const reading =
-    state.reading;
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
+
+
+  if (
+    !patient ||
+    !record
+  ) {
+
+    return;
+
+  }
 
 
   const bag =
-    getBagFillStatus();
+    getBagFillStatus(
+      record
+    );
 
 
   const bagVolume =
-    getCurrentBagVolume();
+    getCurrentBagVolume(
+      record
+    );
 
 
-  const currentRow =
-    getCurrentWindowRow();
+  const urineStatus =
+    getCurrentWindowStatus(
+      record
+    );
 
 
-  const windowStatus =
-    getCurrentWindowStatus();
+  $('dashboard-patient-name')
+    .textContent =
+      patient.name;
 
 
-  /*
-    SENSOR VALUES
-  */
+  $('dashboard-patient-id')
+    .textContent =
+      patient.id;
+
+
+  $('dashboard-bed')
+    .textContent =
+      patient.bed;
+
+
+  $('dashboard-bag')
+    .textContent =
+
+      record.bag.id
+      ||
+      'NO BAG';
+
+
+  $('connection-pill')
+    .textContent =
+
+      record.monitoringActive
+
+        ?
+
+        state.liveSource
+
+        :
+
+        'Not monitoring';
+
+
+  $('connection-pill')
+    .classList
+    .toggle(
+
+      'success',
+
+      record.monitoringActive
+
+    );
+
 
   $('sensor-total-value')
     .textContent =
 
       Number(
-        reading.volume
-        ||
+        state.liveReading.volume ||
         0
       )
       .toFixed(
@@ -3432,13 +4127,9 @@ function updateDashboard() {
     .textContent =
 
       Math.round(
-
-        Number(
-          reading.pulses
-          ||
-          0
+        asNumber(
+          state.liveReading.pulses
         )
-
       );
 
 
@@ -3446,23 +4137,17 @@ function updateDashboard() {
     .textContent =
 
       Math.round(
-
-        Number(
-          reading.turbidityRaw
-          ||
-          0
+        asNumber(
+          state.liveReading.turbidityRaw
         )
-
       );
 
 
   $('vout-value')
     .textContent =
 
-      Number(
-        reading.vout
-        ||
-        0
+      asNumber(
+        state.liveReading.vout
       )
       .toFixed(
         2
@@ -3472,10 +4157,8 @@ function updateDashboard() {
   $('vin-value')
     .textContent =
 
-      Number(
-        reading.vin
-        ||
-        0
+      asNumber(
+        state.liveReading.vin
       )
       .toFixed(
         2
@@ -3485,18 +4168,13 @@ function updateDashboard() {
   $('clarity-value')
     .textContent =
 
-      reading.clarity
+      state.liveReading.clarity
       ||
       'UNKNOWN';
 
 
-  /*
-    BAG DISPLAY
-  */
-
   $('bag-volume-value')
     .textContent =
-
       bagVolume
         .toFixed(
           1
@@ -3518,16 +4196,9 @@ function updateDashboard() {
   $('bag-capacity-display')
     .textContent =
 
-      state.bag.capacityMl >
-      0
-
-        ?
-
-        state.bag.capacityMl
-
-        :
-
-        '—';
+      record.bag.capacityMl
+      ||
+      '—';
 
 
   $('bag-fill-status')
@@ -3560,13 +4231,9 @@ function updateDashboard() {
       'warning',
 
       [
-
         'half',
-
         'three-quarter',
-
         'nearly-full'
-
       ]
       .includes(
         bag.level
@@ -3582,11 +4249,8 @@ function updateDashboard() {
       'danger',
 
       [
-
         'full',
-
         'overflow'
-
       ]
       .includes(
         bag.level
@@ -3602,13 +4266,9 @@ function updateDashboard() {
       'warning',
 
       [
-
         'half',
-
         'three-quarter',
-
         'nearly-full'
-
       ]
       .includes(
         bag.level
@@ -3624,11 +4284,8 @@ function updateDashboard() {
       'danger',
 
       [
-
         'full',
-
         'overflow'
-
       ]
       .includes(
         bag.level
@@ -3649,241 +4306,28 @@ function updateDashboard() {
     );
 
 
-  /*
-    3-MINUTE OUTPUT DISPLAY
-  */
-
   $('hourly-urine-value')
     .textContent =
-
-      asNumber(
-        currentRow.urine
-      )
-      .toFixed(
-        1
-      );
+      urineStatus.value
+        .toFixed(
+          1
+        );
 
 
   $('hourly-range-display')
     .textContent =
 
-      `${state.urineLimits.minMl}`
-
-      +
-
-      `–`
-
-      +
-
+      `${state.urineLimits.minMl}` +
+      `–` +
       `${state.urineLimits.maxMl}`;
 
 
   $('hourly-status')
     .textContent =
-      windowStatus.label;
+      urineStatus.label;
 
 
-  updateChartLiveStrip();
-
-
-  updateBagIdentityUi();
-
-
-  syncSettings();
-
-}
-
-
-/* =====================================
-   SETTINGS
-===================================== */
-
-function syncSettings() {
-
-  $('hourly-min-input')
-    .value =
-      state.urineLimits.minMl;
-
-
-  $('hourly-max-input')
-    .value =
-      state.urineLimits.maxMl;
-
-
-  updateBagIdentityUi();
-
-}
-
-
-/* =====================================
-   ALERT UI
-===================================== */
-
-function showMainAlert(
-
-  title,
-
-  message
-
-) {
-
-  $('alert-banner')
-    .classList
-    .remove(
-      'hidden'
-    );
-
-
-  $('alert-title')
-    .textContent =
-      title;
-
-
-  $('alert-message')
-    .textContent =
-      message;
-
-}
-
-
-function addNotification(
-
-  key,
-
-  title,
-
-  message,
-
-  type =
-    'window'
-
-) {
-
-  if (
-    state.notifications
-      .some(
-
-        notification =>
-          notification.key ===
-          key
-
-      )
-  ) {
-
-    return false;
-
-  }
-
-
-  state.notifications
-    .unshift({
-
-      key,
-
-      title,
-
-      message,
-
-      type,
-
-      time:
-        new Date()
-
-    });
-
-
-  $('notification-dot')
-    .classList
-    .remove(
-      'hidden'
-    );
-
-
-  renderNotifications();
-
-
-  return true;
-
-}
-
-
-function renderNotifications() {
-
-  const list =
-    $('notification-list');
-
-
-  if (
-    !state.notifications.length
-  ) {
-
-    list.innerHTML = `
-
-      <div class="empty-state">
-
-        <div>
-          🔔
-        </div>
-
-        <strong>
-          No alerts yet
-        </strong>
-
-        <p>
-          Bag-capacity and
-          ${MONITORING_WINDOW_MINUTES}-minute
-          urine-output alerts
-          will appear here.
-        </p>
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  list.innerHTML =
-
-    state.notifications
-      .map(
-
-        notification => `
-
-          <div
-            class="
-              card
-              notification-card
-              ${escapeHtml(notification.type)}
-            "
-          >
-
-            <strong>
-              ${escapeHtml(notification.title)}
-            </strong>
-
-            <p>
-              ${escapeHtml(notification.message)}
-            </p>
-
-            <time>
-              ${
-                new Date(
-                  notification.time
-                )
-                .toLocaleString()
-              }
-            </time>
-
-          </div>
-
-        `
-
-      )
-      .join('');
+  savePatientRecords();
 
 }
 
@@ -3892,7 +4336,9 @@ function renderNotifications() {
    FLUID BALANCE CALCULATIONS
 ===================================== */
 
-function calculateFluidRows() {
+function calculateFluidRows(
+  record
+) {
 
   let runningInput =
     0;
@@ -3903,11 +4349,8 @@ function calculateFluidRows() {
 
 
   return [
-
-    ...state.fluidRows
-
+    ...record.fluidRows
   ]
-
   .sort(
 
     (
@@ -3926,7 +4369,6 @@ function calculateFluidRows() {
       )
 
   )
-
   .map(
     row => {
 
@@ -3972,40 +4414,30 @@ function calculateFluidRows() {
 
         ...row,
 
-
         runningInput:
 
           Math.round(
-            runningInput
-            *
+            runningInput *
             10
           )
-
           /
-
           10,
-
 
         runningOutput:
 
           Math.round(
-            runningOutput
-            *
+            runningOutput *
             10
           )
-
           /
-
           10,
-
 
         balance:
 
           Math.round(
 
             (
-              runningInput
-              -
+              runningInput -
               runningOutput
             )
 
@@ -4014,86 +4446,13 @@ function calculateFluidRows() {
             10
 
           )
-
           /
-
           10
 
       };
 
     }
-
   );
-
-}
-
-
-function inputCell(
-
-  row,
-
-  field,
-
-  className =
-    ''
-
-) {
-
-  const value =
-    escapeHtml(
-      row[field]
-      ??
-      ''
-    );
-
-
-  const type =
-
-    field ===
-    'initials'
-
-      ?
-
-      'text'
-
-      :
-
-      'number';
-
-
-  const extra =
-
-    type ===
-    'number'
-
-      ?
-
-      'min="0" step="1" inputmode="decimal"'
-
-      :
-
-      'maxlength="4"';
-
-
-  return `
-
-    <input
-
-      class="${className}"
-
-      type="${type}"
-
-      ${extra}
-
-      value="${value}"
-
-      data-row="${escapeHtml(row.key)}"
-
-      data-field="${field}"
-
-    >
-
-  `;
 
 }
 
@@ -4145,22 +4504,9 @@ function formatBalance(
 ) {
 
   const value =
-
-    Math.round(
-
-      asNumber(
-        number
-      )
-
-      *
-
-      10
-
-    )
-
-    /
-
-    10;
+    asNumber(
+      number
+    );
 
 
   return value >
@@ -4179,18 +4525,74 @@ function formatBalance(
 }
 
 
+function inputCell(
+  row,
+  field,
+  className =
+    ''
+) {
+
+  const type =
+
+    field ===
+    'initials'
+
+      ?
+
+      'text'
+
+      :
+
+      'number';
+
+
+  const extra =
+
+    type ===
+    'number'
+
+      ?
+
+      'min="0" step="1" inputmode="decimal"'
+
+      :
+
+      'maxlength="4"';
+
+
+  return `
+
+    <input
+      class="${className}"
+      type="${type}"
+      ${extra}
+      value="${escapeHtml(row[field] ?? '')}"
+      data-row="${escapeHtml(row.key)}"
+      data-field="${field}"
+    >
+
+  `;
+
+}
+
+
 /* =====================================
-   FLUID BALANCE CHART
+   FLUID BALANCE RENDER
 ===================================== */
 
 function renderFluidChart() {
 
-  const body =
-    $('fluid-balance-body');
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
 
 
   if (
-    !body
+    !patient ||
+    !record
   ) {
 
     return;
@@ -4198,139 +4600,118 @@ function renderFluidChart() {
   }
 
 
+  $('chart-patient-name')
+    .textContent =
+      patient.name;
+
+
+  $('chart-patient-details')
+    .textContent =
+
+      `${patient.id} · ` +
+      `Bed ${patient.bed} · ` +
+      `${patient.ward}`;
+
+
   if (
-    !state.fluidRows.length
+    !record.fluidRows.length
   ) {
 
-    getOrCreateCurrentRow();
+    getOrCreateCurrentRow(
+      record
+    );
 
   }
 
 
   const rows =
-    calculateFluidRows();
+    calculateFluidRows(
+      record
+    );
 
 
-  body.innerHTML =
+  $('fluid-balance-body')
+    .innerHTML =
 
-    rows
-      .map(
-        row => `
+      rows
+        .map(
+          row => `
 
-          <tr>
+            <tr>
 
-            <td class="time-cell">
+              <td class="time-cell">
+                ${windowLabel(row.key)}
+              </td>
 
-              ${windowLabel(row.key)}
+              <td>
+                ${inputCell(row, 'oral')}
+              </td>
 
-            </td>
+              <td>
+                ${inputCell(row, 'ivFluids')}
+              </td>
 
+              <td>
+                ${inputCell(row, 'ivMeds')}
+              </td>
 
-            <td>
+              <td class="calc-cell">
+                ${formatNumber(row.runningInput)}
+              </td>
 
-              ${inputCell(row, 'oral')}
+              <td class="auto-urine">
+                ${formatNumber(row.urine)}
+              </td>
 
-            </td>
+              <td>
+                ${inputCell(row, 'drain')}
+              </td>
 
+              <td>
+                ${inputCell(row, 'vomit')}
+              </td>
 
-            <td>
+              <td class="calc-cell">
+                ${formatNumber(row.runningOutput)}
+              </td>
 
-              ${inputCell(row, 'ivFluids')}
+              <td
+                class="
+                  calc-cell
+                  ${
+                    row.balance < 0
+                      ?
+                      'balance-negative'
+                      :
+                      'balance-positive'
+                  }
+                "
+              >
+                ${formatBalance(row.balance)}
+              </td>
 
-            </td>
+              <td>
 
-
-            <td>
-
-              ${inputCell(row, 'ivMeds')}
-
-            </td>
-
-
-            <td class="calc-cell">
-
-              ${formatNumber(row.runningInput)}
-
-            </td>
-
-
-            <td class="auto-urine">
-
-              ${formatNumber(row.urine)}
-
-            </td>
-
-
-            <td>
-
-              ${inputCell(row, 'drain')}
-
-            </td>
-
-
-            <td>
-
-              ${inputCell(row, 'vomit')}
-
-            </td>
-
-
-            <td class="calc-cell">
-
-              ${formatNumber(row.runningOutput)}
-
-            </td>
-
-
-            <td
-              class="
-                calc-cell
                 ${
-                  row.balance <
-                  0
-
-                    ?
-
-                    'balance-negative'
-
-                    :
-
-                    'balance-positive'
+                  inputCell(
+                    row,
+                    'initials',
+                    'initials-input'
+                  )
                 }
-              "
-            >
 
-              ${formatBalance(row.balance)}
+              </td>
 
-            </td>
+            </tr>
 
-
-            <td>
-
-              ${
-                inputCell(
-
-                  row,
-
-                  'initials',
-
-                  'initials-input'
-
-                )
-              }
-
-            </td>
-
-          </tr>
-
-        `
-      )
-      .join('');
+          `
+        )
+        .join('');
 
 
-  body
+  document
     .querySelectorAll(
-      'input[data-row]'
+      '#fluid-balance-body input'
     )
     .forEach(
       input => {
@@ -4343,16 +4724,69 @@ function renderFluidChart() {
 
         );
 
+      }
+    );
 
-        input.addEventListener(
 
-          'blur',
+  const currentStatus =
+    getCurrentWindowStatus(
+      record
+    );
 
-          handleFluidInput
 
+  $('chart-hourly-volume')
+    .textContent =
+      currentStatus.value
+        .toFixed(
+          1
         );
 
-      }
+
+  $('chart-source')
+    .textContent =
+
+      `${state.liveSource} · ` +
+      `3-minute window`;
+
+
+  $('chart-hourly-status')
+    .textContent =
+      currentStatus.label;
+
+
+  $('chart-hourly-status')
+    .classList
+    .toggle(
+
+      'success',
+
+      currentStatus.level ===
+      'success'
+
+    );
+
+
+  $('chart-hourly-status')
+    .classList
+    .toggle(
+
+      'warning',
+
+      currentStatus.level ===
+      'warning'
+
+    );
+
+
+  $('chart-hourly-status')
+    .classList
+    .toggle(
+
+      'danger',
+
+      currentStatus.level ===
+      'danger'
+
     );
 
 
@@ -4369,7 +4803,6 @@ function renderFluidChart() {
 
     $('summary-input')
       .textContent =
-
         formatNumber(
           last.runningInput
         );
@@ -4377,7 +4810,6 @@ function renderFluidChart() {
 
     $('summary-output')
       .textContent =
-
         formatNumber(
           last.runningOutput
         );
@@ -4390,34 +4822,7 @@ function renderFluidChart() {
           last.balance
         )} mL`;
 
-
-    $('summary-balance')
-      .classList
-      .toggle(
-
-        'balance-negative',
-
-        last.balance <
-        0
-
-      );
-
-
-    $('summary-balance')
-      .classList
-      .toggle(
-
-        'balance-positive',
-
-        last.balance >=
-        0
-
-      );
-
   }
-
-
-  updateChartLiveStrip();
 
 }
 
@@ -4426,17 +4831,30 @@ function handleFluidInput(
   event
 ) {
 
-  const element =
+  const record =
+    getSelectedRecord();
+
+
+  if (
+    !record
+  ) {
+
+    return;
+
+  }
+
+
+  const input =
     event.target;
 
 
   const row =
-    state.fluidRows
+    record.fluidRows
       .find(
 
-        current =>
-          current.key ===
-          element.dataset.row
+        item =>
+          item.key ===
+          input.dataset.row
 
       );
 
@@ -4451,27 +4869,28 @@ function handleFluidInput(
 
 
   const field =
-    element.dataset.field;
+    input.dataset.field;
 
 
-  row[field] =
+  row[
+    field
+  ] =
 
     field ===
     'initials'
 
       ?
 
-      element
-        .value
+      input.value
         .toUpperCase()
         .trim()
 
       :
 
-      element.value;
+      input.value;
 
 
-  saveFluidRows();
+  savePatientRecords();
 
 
   renderFluidChart();
@@ -4479,103 +4898,496 @@ function handleFluidInput(
 }
 
 
-function updateChartLiveStrip() {
+/* =====================================
+   THRESHOLDS
+===================================== */
+
+function saveWindowThresholds(
+  minimumValue,
+  maximumValue
+) {
+
+  const minimum =
+    Number(
+      minimumValue
+    );
+
+
+  const maximum =
+    Number(
+      maximumValue
+    );
+
 
   if (
-    !$(
-      'chart-hourly-volume'
+    !Number.isFinite(
+      minimum
     )
+
+    ||
+
+    !Number.isFinite(
+      maximum
+    )
+
+    ||
+
+    minimum <
+    0
+
+    ||
+
+    maximum <=
+    minimum
   ) {
+
+    toast(
+      'Check threshold values'
+    );
+
+
+    return false;
+
+  }
+
+
+  state.urineLimits.minMl =
+    minimum;
+
+
+  state.urineLimits.maxMl =
+    maximum;
+
+
+  localStorage.setItem(
+
+    STORAGE_WINDOW_MIN,
+
+    String(
+      minimum
+    )
+
+  );
+
+
+  localStorage.setItem(
+
+    STORAGE_WINDOW_MAX,
+
+    String(
+      maximum
+    )
+
+  );
+
+
+  toast(
+
+    `3-minute range saved: ` +
+    `${minimum}–${maximum} mL`
+
+  );
+
+
+  return true;
+
+}
+
+
+function syncSettings() {
+
+  $('hourly-min-input')
+    .value =
+      state.urineLimits.minMl;
+
+
+  $('hourly-max-input')
+    .value =
+      state.urineLimits.maxMl;
+
+
+  $('settings-source')
+    .textContent =
+      state.liveSource;
+
+
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
+
+
+  if (
+    !patient ||
+    !record
+  ) {
+
+    $('settings-patient-name')
+      .textContent =
+        'None selected';
+
+
+    $('settings-patient-id')
+      .textContent =
+        '—';
+
+
+    $('settings-bag-id')
+      .textContent =
+        '—';
+
+
+    $('settings-bag-capacity')
+      .textContent =
+        '—';
+
 
     return;
 
   }
 
 
-  const row =
-    getCurrentWindowRow();
+  $('settings-patient-name')
+    .textContent =
+      patient.name;
 
 
-  const status =
-    getCurrentWindowStatus();
+  $('settings-patient-id')
+    .textContent =
+      patient.id;
 
 
-  $('chart-hourly-volume')
+  $('settings-bag-id')
     .textContent =
 
-      asNumber(
-        row.urine
-      )
-      .toFixed(
-        1
-      );
+      record.bag.id
+      ||
+      'Not attached';
 
 
-  $('chart-source')
+  $('settings-bag-capacity')
     .textContent =
 
-      `${state.liveSource} · ` +
-      `${MONITORING_WINDOW_MINUTES}-minute window`;
-
-
-  $('chart-hourly-status')
-    .textContent =
-      status.label;
-
-
-  $('chart-hourly-status')
-    .classList
-    .toggle(
-
-      'success',
-
-      status.level ===
-      'success'
-
-    );
-
-
-  $('chart-hourly-status')
-    .classList
-    .toggle(
-
-      'warning',
-
-      status.level ===
-      'warning'
-
-    );
-
-
-  $('chart-hourly-status')
-    .classList
-    .toggle(
-
-      'danger',
-
-      status.level ===
-      'danger'
-
-    );
+      record.bag.capacityMl
+      ||
+      '—';
 
 }
 
 
-function addCurrentHourRow() {
+/* =====================================
+   DEMO READING
+===================================== */
 
-  getOrCreateCurrentRow();
+function simulateReading() {
+
+  const next =
+    Number(
+      state.liveReading.volume ||
+      0
+    )
+    +
+    25;
 
 
-  renderFluidChart();
+  acceptLiveReading(
 
+    {
 
-  toast(
+      volume:
+        next,
 
-    `Current ` +
-    `${MONITORING_WINDOW_MINUTES}-minute ` +
-    `window added`
+      pulses:
+
+        Number(
+          state.liveReading.pulses ||
+          0
+        )
+        +
+        112,
+
+      turbidityRaw:
+
+        1720
+
+        +
+
+        Math.floor(
+          Math.random() *
+          40
+        ),
+
+      vout:
+
+        1.36
+
+        +
+
+        Math.random() *
+        0.06,
+
+      vin:
+
+        2.04
+
+        +
+
+        Math.random() *
+        0.09,
+
+      clarity:
+        'CLOUDY'
+
+    },
+
+    'Demo feed'
 
   );
+
+}
+
+
+/* =====================================
+   SERIAL PARSING
+===================================== */
+
+function parsePrototypeLine(
+  line
+) {
+
+  const clean =
+    String(
+      line ||
+      ''
+    )
+    .trim();
+
+
+  if (
+    !clean
+  ) {
+
+    return false;
+
+  }
+
+
+  const parts =
+    clean
+      .split(',')
+      .map(
+        value =>
+          value.trim()
+      );
+
+
+  if (
+    parts.length <
+    7
+  ) {
+
+    return false;
+
+  }
+
+
+  const [
+    timeMs,
+    volume,
+    pulses,
+    raw,
+    vout,
+    vin,
+    status
+  ] =
+    parts;
+
+
+  const numbers =
+    [
+      volume,
+      pulses,
+      raw,
+      vout,
+      vin
+    ]
+    .map(
+      Number
+    );
+
+
+  if (
+    numbers.some(
+      Number.isNaN
+    )
+  ) {
+
+    return false;
+
+  }
+
+
+  return acceptLiveReading(
+
+    {
+
+      volume:
+        numbers[0],
+
+      pulses:
+        numbers[1],
+
+      turbidityRaw:
+        numbers[2],
+
+      vout:
+        numbers[3],
+
+      vin:
+        numbers[4],
+
+      clarity:
+        status
+
+    },
+
+    'Nesso N1 Web Serial'
+
+  );
+
+}
+
+
+/* =====================================
+   DIRECT WEB SERIAL
+===================================== */
+
+async function connectSerial() {
+
+  await enableAlertSounds();
+
+
+  if (
+    !(
+      'serial'
+      in navigator
+    )
+  ) {
+
+    $('serial-status')
+      .textContent =
+
+        'Web Serial is unavailable. ' +
+        'Use the separate Nesso Sensor Logger.';
+
+
+    return;
+
+  }
+
+
+  try {
+
+    state.serial.port =
+      await navigator
+        .serial
+        .requestPort();
+
+
+    await state.serial.port
+      .open({
+
+        baudRate:
+          115200
+
+      });
+
+
+    state.serial.connected =
+      true;
+
+
+    state.liveSource =
+      'Nesso N1 Web Serial';
+
+
+    const decoder =
+      new TextDecoderStream();
+
+
+    state.serial.port
+      .readable
+      .pipeTo(
+        decoder.writable
+      );
+
+
+    state.serial.reader =
+      decoder
+        .readable
+        .getReader();
+
+
+    let buffer =
+      '';
+
+
+    while (
+      state.serial.connected
+    ) {
+
+      const {
+        value,
+        done
+      } =
+        await state.serial
+          .reader
+          .read();
+
+
+      if (
+        done
+      ) {
+
+        break;
+
+      }
+
+
+      buffer +=
+        value ||
+        '';
+
+
+      const lines =
+        buffer.split(
+          /\r?\n/
+        );
+
+
+      buffer =
+        lines.pop();
+
+
+      lines.forEach(
+        parsePrototypeLine
+      );
+
+    }
+
+  } catch (
+    error
+  ) {
+
+    $('serial-status')
+      .textContent =
+
+        `Serial connection not completed: ` +
+        `${error.message || error}`;
+
+  }
 
 }
 
@@ -4586,33 +5398,48 @@ function addCurrentHourRow() {
 
 function exportFluidCsv() {
 
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
+
+
+  if (
+    !patient ||
+    !record
+  ) {
+
+    return;
+
+  }
+
+
   const rows =
-    calculateFluidRows();
+    calculateFluidRows(
+      record
+    );
 
 
   const header =
     [
 
+      'Patient_ID',
+      'Patient_Name',
+      'Ward',
+      'Bed',
+      'Logging_Date',
       'Monitoring_Window',
-
       'Oral_mL',
-
       'IV_Fluids_mL',
-
       'IV_Meds_mL',
-
       'Running_Input_mL',
-
       'Urine_Auto_mL',
-
       'Drain_mL',
-
       'Vomit_mL',
-
       'Running_Output_mL',
-
       'Cumulative_Balance_mL',
-
       'RN_Initials'
 
     ];
@@ -4620,11 +5447,7 @@ function exportFluidCsv() {
 
   const lines =
     [
-
-      header.join(
-        ','
-      )
-
+      header.join(',')
     ];
 
 
@@ -4634,6 +5457,16 @@ function exportFluidCsv() {
       lines.push(
 
         [
+
+          patient.id,
+
+          `"${patient.name}"`,
+
+          `"${patient.ward}"`,
+
+          patient.bed,
+
+          `"${record.loggingDate || ''}"`,
 
           `"${windowLabel(row.key)}"`,
 
@@ -4668,8 +5501,7 @@ function exportFluidCsv() {
           row.balance,
 
           `"${String(
-            row.initials
-            ||
+            row.initials ||
             ''
           )
           .replaceAll(
@@ -4690,18 +5522,14 @@ function exportFluidCsv() {
     new Blob(
 
       [
-
         lines.join(
           '\n'
         )
-
       ],
 
       {
-
         type:
           'text/csv;charset=utf-8'
-
       }
 
     );
@@ -4725,9 +5553,9 @@ function exportFluidCsv() {
 
   link.download =
 
-    `fluid-balance-` +
-    `${state.bag.patientId || 'patient'}-` +
-    `${new Date().toISOString().slice(0,10)}.csv`;
+    `fluid-balance-${patient.id}-` +
+
+    `${new Date().toISOString().slice(0, 10)}.csv`;
 
 
   document.body
@@ -4748,25 +5576,29 @@ function exportFluidCsv() {
 
 
   toast(
-    'Fluid balance CSV exported'
+    `${patient.name} CSV exported`
   );
 
 }
 
 
 /* =====================================
-   RESET SESSION
+   RESET PATIENT SESSION
 ===================================== */
 
 function resetFluidSession() {
 
+  const patient =
+    getSelectedPatient();
+
+
+  const record =
+    getSelectedRecord();
+
+
   if (
-    !confirm(
-
-      'Start a new fluid-balance session? ' +
-      'This clears the chart stored in this browser.'
-
-    )
+    !patient ||
+    !record
   ) {
 
     return;
@@ -4774,35 +5606,48 @@ function resetFluidSession() {
   }
 
 
-  state.fluidRows =
+  const confirmed =
+    confirm(
+
+      `Start a new fluid-balance ` +
+      `session for ${patient.name}?`
+
+    );
+
+
+  if (
+    !confirmed
+  ) {
+
+    return;
+
+  }
+
+
+  record.fluidRows =
     [];
 
 
-  state.lastSensorTotal =
-    null;
+  record.lastSensorTotal =
+    Number(
+      state.liveReading.volume ||
+      0
+    );
 
 
-  localStorage.removeItem(
-    STORAGE_ROWS
-  );
+  record.loggingDate =
+    new Date()
+      .toISOString();
 
 
-  sessionStorage.removeItem(
-    SESSION_LAST_SENSOR
-  );
-
-
-  getOrCreateCurrentRow();
+  savePatientRecords();
 
 
   renderFluidChart();
 
 
-  updateDashboard();
-
-
   toast(
-    'New fluid-balance session started'
+    `New session started for ${patient.name}`
   );
 
 }
@@ -4815,11 +5660,8 @@ function resetFluidSession() {
 const TRUSTED_LOGGER_ORIGINS =
   new Set(
     [
-
       'http://127.0.0.1:5000',
-
       'http://localhost:5000'
-
     ]
   );
 
@@ -4851,15 +5693,11 @@ function handleBridgePayload(
   }
 
 
-  const reading =
-    payload.reading
-    ||
-    payload;
-
-
   acceptLiveReading(
 
-    reading,
+    payload.reading
+    ||
+    payload,
 
     'Nesso N1 Sensor Logger'
 
@@ -4918,7 +5756,6 @@ $('login-form')
 
       event.preventDefault();
 
-
       await login();
 
     }
@@ -4965,13 +5802,10 @@ $('notification-button')
 
     'click',
 
-    () => {
-
+    () =>
       showView(
         'notifications'
-      );
-
-    }
+      )
 
   );
 
@@ -4983,12 +5817,26 @@ $('simulate-reading')
 
     async () => {
 
-      /*
-        Ensure audio is unlocked
-        when using demo readings.
-      */
-
       await enableAlertSounds();
+
+
+      const record =
+        getSelectedRecord();
+
+
+      if (
+        !record ||
+        !record.monitoringActive
+      ) {
+
+        toast(
+          'Select a patient and attach a bag first'
+        );
+
+
+        return;
+
+      }
 
 
       simulateReading();
@@ -5021,11 +5869,6 @@ $('ack-alert')
           'hidden'
         );
 
-
-      toast(
-        'Alert acknowledged'
-      );
-
     }
 
   );
@@ -5042,23 +5885,16 @@ document
 
         'click',
 
-        () => {
-
+        () =>
           showView(
             button.dataset.go
-          );
-
-        }
+          )
 
       );
 
     }
   );
 
-
-/* =====================================
-   SAVE THRESHOLDS
-===================================== */
 
 $('hourly-threshold-form')
   .addEventListener(
@@ -5070,32 +5906,25 @@ $('hourly-threshold-form')
       event.preventDefault();
 
 
-      if (
-        saveWindowThresholds(
+      saveWindowThresholds(
 
-          $('hourly-min-input')
-            .value,
+        $('hourly-min-input')
+          .value,
 
-          $('hourly-max-input')
-            .value
+        $('hourly-max-input')
+          .value
 
-        )
-      ) {
-
-        showView(
-          'dashboard'
-        );
-
-      }
+      );
 
     }
 
   );
 
 
-/* =====================================
-   DEMO LOW OUTPUT TEST
-===================================== */
+/*
+  Demonstrate low / normal / high
+  without waiting three minutes.
+*/
 
 $('evaluate-hour-now')
   .addEventListener(
@@ -5107,22 +5936,46 @@ $('evaluate-hour-now')
       await enableAlertSounds();
 
 
+      const patient =
+        getSelectedPatient();
+
+
+      const record =
+        getSelectedRecord();
+
+
+      if (
+        !patient ||
+        !record
+      ) {
+
+        toast(
+          'Select a patient first'
+        );
+
+
+        return;
+
+      }
+
+
       const row =
-        getCurrentWindowRow();
+        getOrCreateCurrentRow(
+          record
+        );
 
 
       row.sensorSeen =
         true;
 
 
-      saveFluidRows();
-
-
-      const notificationsBefore =
-        state.notifications.length;
+      const before =
+        record.notifications.length;
 
 
       evaluateUrineWindow(
+
+        record,
 
         row,
 
@@ -5131,14 +5984,9 @@ $('evaluate-hour-now')
       );
 
 
-      /*
-        If no low or high warning
-        was generated, show normal.
-      */
-
       if (
-        state.notifications.length ===
-        notificationsBefore
+        record.notifications.length ===
+        before
       ) {
 
         const urine =
@@ -5147,39 +5995,22 @@ $('evaluate-hour-now')
           );
 
 
-        const min =
-          state.urineLimits.minMl;
+        showMainAlertForPatient(
 
+          patient,
 
-        const max =
-          state.urineLimits.maxMl;
+          'Urine output within configured range',
 
+          `${urine.toFixed(1)} mL is within ` +
+          `${state.urineLimits.minMl}–` +
+          `${state.urineLimits.maxMl} mL / 3 min.`
 
-        if (
-          urine >=
-          min
-
-          &&
-
-          urine <=
-          max
-        ) {
-
-          showMainAlert(
-
-            `${MONITORING_WINDOW_MINUTES}-minute ` +
-            `urine within configured range`,
-
-            `${urine.toFixed(1)} mL ` +
-            `is within the configured ` +
-            `${min}–${max} mL per ` +
-            `${MONITORING_WINDOW_MINUTES} minutes.`
-
-          );
-
-        }
+        );
 
       }
+
+
+      savePatientRecords();
 
 
       updateDashboard();
@@ -5187,23 +6018,10 @@ $('evaluate-hour-now')
 
       renderFluidChart();
 
-
-      toast(
-
-        `Current ` +
-        `${MONITORING_WINDOW_MINUTES}-minute ` +
-        `window evaluated`
-
-      );
-
     }
 
   );
 
-
-/* =====================================
-   SOUND TESTS
-===================================== */
 
 $('test-bag-sound')
   .addEventListener(
@@ -5217,25 +6035,17 @@ $('test-bag-sound')
 
 
       if (
-        !ready
+        ready
       ) {
 
+        await playBagAlertSound();
+
+
         toast(
-          'Unable to enable browser audio'
+          'Bag alert sound'
         );
 
-
-        return;
-
       }
-
-
-      await playBagAlertSound();
-
-
-      toast(
-        'Bag alert sound played'
-      );
 
     }
 
@@ -5254,25 +6064,17 @@ $('test-urine-sound')
 
 
       if (
-        !ready
+        ready
       ) {
 
+        await playUrineAlertSound();
+
+
         toast(
-          'Unable to enable browser audio'
+          'Urine-output alert sound'
         );
 
-
-        return;
-
       }
-
-
-      await playUrineAlertSound();
-
-
-      toast(
-        'Urine alert sound played'
-      );
 
     }
 
@@ -5284,7 +6086,26 @@ $('add-current-hour')
 
     'click',
 
-    addCurrentHourRow
+    () => {
+
+      const record =
+        getSelectedRecord();
+
+
+      if (
+        record
+      ) {
+
+        getOrCreateCurrentRow(
+          record
+        );
+
+
+        renderFluidChart();
+
+      }
+
+    }
 
   );
 
@@ -5309,15 +6130,13 @@ $('reset-fluid-session')
   );
 
 
-/*
-  Every 15 seconds check
-  whether a previous
-  3-minute window finished.
-*/
+/* =====================================
+   AUTOMATIC COMPLETED-WINDOW CHECK
+===================================== */
 
 setInterval(
 
-  evaluateCompletedWindows,
+  evaluateAllPatientCompletedWindows,
 
   15000
 
@@ -5325,19 +6144,13 @@ setInterval(
 
 
 /* =====================================
-   START APPLICATION
+   STARTUP
 ===================================== */
 
-getOrCreateCurrentRow();
+updateNotificationDot();
 
+renderPatientSelection();
 
-updateBagIdentityUi();
-
+renderNotifications();
 
 syncSettings();
-
-
-updateDashboard();
-
-
-renderFluidChart();
