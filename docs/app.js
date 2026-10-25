@@ -1,11 +1,23 @@
+const MONITORING_WINDOW_MINUTES = 3;
+
+const DEFAULT_WINDOW_MIN_ML = 10;
+const DEFAULT_WINDOW_MAX_ML = 30;
+
+
+/*
+  Separate browser storage is used for the
+  3-minute demonstration so old hourly data
+  does not interfere with this version.
+*/
+
 const STORAGE_ROWS =
-  'smartUrineFluidRowsV3';
+  `smartUrineFluidRows_${MONITORING_WINDOW_MINUTES}min`;
 
-const STORAGE_HOURLY_MIN =
-  'hourlyUrineMinMl';
+const STORAGE_WINDOW_MIN =
+  `urineWindowMinMl_${MONITORING_WINDOW_MINUTES}min`;
 
-const STORAGE_HOURLY_MAX =
-  'hourlyUrineMaxMl';
+const STORAGE_WINDOW_MAX =
+  `urineWindowMaxMl_${MONITORING_WINDOW_MINUTES}min`;
 
 const SESSION_LAST_SENSOR =
   'smartUrineLastSensorTotal';
@@ -15,100 +27,99 @@ const DEMO_BAG_QR =
   'BAG=UB-2026-001|' +
   'PATIENT=P-0001|' +
   'DEVICE=NC-72X|' +
-  'CAPACITY_ML=2000';
+  'CAPACITY_ML=200';
 
 
 const state = {
 
-  loggedIn:
-    false,
+  loggedIn: false,
 
-  currentView:
-    'scan',
+  currentView: 'scan',
 
-  scanned:
-    false,
+  scanned: false,
+
 
   reading: {
 
-    volume:
-      0,
+    volume: 0,
 
-    pulses:
-      0,
+    pulses: 0,
 
-    turbidityRaw:
-      0,
+    turbidityRaw: 0,
 
-    vout:
-      0,
+    vout: 0,
 
-    vin:
-      0,
+    vin: 0,
 
-    clarity:
-      'UNKNOWN'
+    clarity: 'UNKNOWN'
 
   },
+
 
   bag: {
 
-    id:
-      null,
+    id: null,
 
-    patientId:
-      'P-0001',
+    patientId: 'P-0001',
 
-    deviceId:
-      null,
+    deviceId: null,
 
-    capacityMl:
-      0,
+    capacityMl: 0,
 
-    startSensorTotal:
-      0,
+    startSensorTotal: 0,
 
-    sessionId:
-      null
+    sessionId: null
 
   },
 
-  hourlyLimits: {
+
+  urineLimits: {
 
     minMl:
+
       Number(
         localStorage.getItem(
-          STORAGE_HOURLY_MIN
+          STORAGE_WINDOW_MIN
         )
-      ) || 50,
+      )
+
+      ||
+
+      DEFAULT_WINDOW_MIN_ML,
+
 
     maxMl:
+
       Number(
         localStorage.getItem(
-          STORAGE_HOURLY_MAX
+          STORAGE_WINDOW_MAX
         )
-      ) || 200
+      )
+
+      ||
+
+      DEFAULT_WINDOW_MAX_ML
 
   },
 
-  notifications:
-    [],
+
+  notifications: [],
+
 
   serial: {
 
-    port:
-      null,
+    port: null,
 
-    reader:
-      null,
+    reader: null,
 
-    connected:
-      false
+    connected: false
 
   },
 
+
   fluidRows:
     loadFluidRows(),
+
 
   lastSensorTotal:
 
@@ -116,13 +127,18 @@ const state = {
       SESSION_LAST_SENSOR
     ) !== null
 
-      ? Number(
-          sessionStorage.getItem(
-            SESSION_LAST_SENSOR
-          )
-        )
+      ?
 
-      : null,
+      Number(
+        sessionStorage.getItem(
+          SESSION_LAST_SENSOR
+        )
+      )
+
+      :
+
+      null,
+
 
   liveSource:
     'Waiting for live feed'
@@ -158,6 +174,11 @@ const $ =
     document.getElementById(
       id
     );
+
+
+/* =====================================
+   GENERAL
+===================================== */
 
 
 function toast(
@@ -208,7 +229,7 @@ function escapeHtml(
 
     /[&<>'"]/g,
 
-    c => ({
+    character => ({
 
       '&':
         '&amp;',
@@ -225,14 +246,17 @@ function escapeHtml(
       '"':
         '&quot;'
 
-    }[c])
+    }[character])
 
   );
 
 }
 
 
-/* LOGIN */
+/* =====================================
+   LOGIN
+===================================== */
+
 
 function login() {
 
@@ -261,7 +285,10 @@ function login() {
 }
 
 
-/* NAVIGATION */
+/* =====================================
+   NAVIGATION
+===================================== */
+
 
 function showView(
   name
@@ -313,7 +340,8 @@ function showView(
 
   $('page-title')
     .textContent =
-      titles[name] ||
+      titles[name]
+      ||
       'Smart Urine Monitoring';
 
 
@@ -363,6 +391,7 @@ function showView(
    QR CODE / BAG
 ===================================== */
 
+
 function parseBagQr(
   rawValue
 ) {
@@ -380,14 +409,14 @@ function parseBagQr(
   .forEach(
     part => {
 
-      const pos =
+      const position =
         part.indexOf(
           '='
         );
 
 
       if (
-        pos ===
+        position ===
         -1
       ) {
 
@@ -400,7 +429,7 @@ function parseBagQr(
         part
           .slice(
             0,
-            pos
+            position
           )
           .trim()
           .toUpperCase();
@@ -409,7 +438,7 @@ function parseBagQr(
       const value =
         part
           .slice(
-            pos + 1
+            position + 1
           )
           .trim();
 
@@ -435,15 +464,25 @@ function parseBagQr(
 
 
   if (
-    !fields.BAG ||
+    !fields.BAG
+
+    ||
+
     !Number.isFinite(
       capacity
-    ) ||
-    capacity <= 0
+    )
+
+    ||
+
+    capacity <=
+    0
   ) {
 
     throw new Error(
-      'Invalid urinary bag QR code: BAG and CAPACITY_ML are required.'
+
+      'Invalid urinary bag QR code: ' +
+      'BAG and CAPACITY_ML are required.'
+
     );
 
   }
@@ -455,11 +494,13 @@ function parseBagQr(
       fields.BAG,
 
     patient:
-      fields.PATIENT ||
+      fields.PATIENT
+      ||
       'P-0001',
 
     device:
-      fields.DEVICE ||
+      fields.DEVICE
+      ||
       'Unknown device',
 
     capacityMl:
@@ -498,19 +539,20 @@ function applyScannedBag(
       capacityMl:
         bag.capacityMl,
 
-      /*
-        Record the sensor total
-        when this bag is attached.
 
-        Bag fullness then starts
-        from zero for this bag.
+      /*
+        The bag starts empty at the
+        sensor total present when
+        the new bag is scanned.
       */
 
       startSensorTotal:
         Number(
-          state.reading.volume ||
+          state.reading.volume
+          ||
           0
         ),
+
 
       sessionId:
         `${bag.bag}-${Date.now()}`
@@ -524,6 +566,7 @@ function applyScannedBag(
 
     $('scan-message')
       .textContent =
+
         `${sourceLabel}: ` +
         `${bag.bag} linked. ` +
         `Capacity ${bag.capacityMl} mL.`;
@@ -531,6 +574,7 @@ function applyScannedBag(
 
     $('last-scan-time')
       .textContent =
+
         new Date()
           .toLocaleTimeString(
 
@@ -550,6 +594,7 @@ function applyScannedBag(
 
 
     updateBagIdentityUi();
+
 
     evaluateBagCapacity();
 
@@ -573,12 +618,18 @@ function applyScannedBag(
 
     return true;
 
-  } catch (err) {
+  } catch (
+    error
+  ) {
 
     $('scan-message')
       .textContent =
-        err.message ||
-        String(err);
+
+        error.message
+        ||
+        String(
+          error
+        );
 
 
     toast(
@@ -609,17 +660,20 @@ function completeDemoScan() {
 function updateBagIdentityUi() {
 
   const bagId =
-    state.bag.id ||
+    state.bag.id
+    ||
     'Not scanned';
 
 
   const patientId =
-    state.bag.patientId ||
+    state.bag.patientId
+    ||
     'P-0001';
 
 
   const deviceId =
-    state.bag.deviceId ||
+    state.bag.deviceId
+    ||
     'Not linked';
 
 
@@ -628,9 +682,13 @@ function updateBagIdentityUi() {
     state.bag.capacityMl >
     0
 
-      ? state.bag.capacityMl
+      ?
 
-      : '—';
+      state.bag.capacityMl
+
+      :
+
+      '—';
 
 
   $('patient-id')
@@ -660,7 +718,9 @@ function updateBagIdentityUi() {
 
   $('dashboard-bag')
     .textContent =
-      state.bag.id ||
+
+      state.bag.id
+      ||
       'NO BAG';
 
 
@@ -679,6 +739,11 @@ function updateBagIdentityUi() {
       patientId;
 
 }
+
+
+/* =====================================
+   QR CAMERA
+===================================== */
 
 
 async function startCamera() {
@@ -729,7 +794,9 @@ async function startCamera() {
 
     $('scan-message')
       .textContent =
-        'Camera active. Looking for a QR code…';
+
+        'Camera active. ' +
+        'Looking for a QR code…';
 
 
     if (
@@ -741,7 +808,9 @@ async function startCamera() {
         new BarcodeDetector({
 
           formats:
-            ['qr_code']
+            [
+              'qr_code'
+            ]
 
         });
 
@@ -777,7 +846,8 @@ async function startCamera() {
 
               applyScannedBag(
 
-                codes[0].rawValue,
+                codes[0]
+                  .rawValue,
 
                 'QR scan'
 
@@ -788,7 +858,15 @@ async function startCamera() {
 
             }
 
-          } catch (_) {}
+          } catch (
+            error
+          ) {
+
+            /*
+              Continue trying.
+            */
+
+          }
 
 
           requestAnimationFrame(
@@ -804,17 +882,22 @@ async function startCamera() {
 
       $('scan-message')
         .textContent =
+
           'Camera active, but this browser ' +
           'does not support QR detection. ' +
           'Use Demo QR.';
 
     }
 
-  } catch (err) {
+  } catch (
+    error
+  ) {
 
     $('scan-message')
       .textContent =
-        'Camera permission unavailable. Use Demo QR.';
+
+        'Camera permission unavailable. ' +
+        'Use Demo QR.';
 
 
     toast(
@@ -840,8 +923,10 @@ function stopCamera() {
       .srcObject
       .getTracks()
       .forEach(
+
         track =>
           track.stop()
+
       );
 
   }
@@ -867,10 +952,14 @@ function stopCamera() {
    BAG CAPACITY
 ===================================== */
 
+
 function getCurrentBagVolume() {
 
   if (
-    !state.bag.id ||
+    !state.bag.id
+
+    ||
+
     !state.bag.capacityMl
   ) {
 
@@ -881,21 +970,23 @@ function getCurrentBagVolume() {
 
   const sensorTotal =
     Number(
-      state.reading.volume ||
+      state.reading.volume
+      ||
       0
     );
 
 
   let start =
     Number(
-      state.bag.startSensorTotal ||
+      state.bag.startSensorTotal
+      ||
       0
     );
 
 
   /*
-    If the Nesso itself was reset,
-    continue from zero.
+    If the Nesso cumulative
+    counter has been reset.
   */
 
   if (
@@ -929,13 +1020,15 @@ function getBagFillStatus() {
 
   const capacity =
     Number(
-      state.bag.capacityMl ||
+      state.bag.capacityMl
+      ||
       0
     );
 
 
   if (
-    capacity <= 0
+    capacity <=
+    0
   ) {
 
     return {
@@ -986,6 +1079,7 @@ function getBagFillStatus() {
         'Overflow risk',
 
       message:
+
         `Overflow risk: ` +
         `${volume.toFixed(0)} mL recorded ` +
         `in a ${capacity} mL bag.`
@@ -1011,7 +1105,9 @@ function getBagFillStatus() {
         'Full',
 
       message:
-        'Urinary bag has reached full capacity. Replace the bag.'
+
+        'Urinary bag has reached ' +
+        'full capacity. Replace the bag.'
 
     };
 
@@ -1057,7 +1153,9 @@ function getBagFillStatus() {
         '75% full',
 
       message:
-        'Urinary bag is approximately three-quarters full.'
+
+        'Urinary bag is approximately ' +
+        'three-quarters full.'
 
     };
 
@@ -1080,7 +1178,9 @@ function getBagFillStatus() {
         'Half full',
 
       message:
-        'Urinary bag is approximately half full.'
+
+        'Urinary bag is approximately ' +
+        'half full.'
 
     };
 
@@ -1108,7 +1208,10 @@ function getBagFillStatus() {
 function evaluateBagCapacity() {
 
   if (
-    !state.bag.id ||
+    !state.bag.id
+
+    ||
+
     !state.bag.capacityMl
   ) {
 
@@ -1122,7 +1225,8 @@ function evaluateBagCapacity() {
 
 
   const prefix =
-    state.bag.sessionId ||
+    state.bag.sessionId
+    ||
     state.bag.id;
 
 
@@ -1141,9 +1245,12 @@ function evaluateBagCapacity() {
           'Urinary bag half full',
 
         message:
-          'Urinary bag has reached approximately 50% capacity.'
+
+          'Urinary bag has reached ' +
+          'approximately 50% capacity.'
 
       },
+
 
       {
 
@@ -1157,9 +1264,12 @@ function evaluateBagCapacity() {
           'Urinary bag 75% full',
 
         message:
-          'Urinary bag has reached approximately 75% capacity.'
+
+          'Urinary bag has reached ' +
+          'approximately 75% capacity.'
 
       },
+
 
       {
 
@@ -1173,9 +1283,12 @@ function evaluateBagCapacity() {
           'Urinary bag nearly full',
 
         message:
-          'Urinary bag has reached at least 90% capacity.'
+
+          'Urinary bag has reached ' +
+          'at least 90% capacity.'
 
       },
+
 
       {
 
@@ -1189,7 +1302,9 @@ function evaluateBagCapacity() {
           'Urinary bag full',
 
         message:
-          'Urinary bag has reached full capacity. Replace the bag.'
+
+          'Urinary bag has reached ' +
+          'full capacity. Replace the bag.'
 
       }
 
@@ -1245,6 +1360,7 @@ function evaluateBagCapacity() {
   ) {
 
     const message =
+
       `Overflow risk: ` +
       `${getCurrentBagVolume().toFixed(0)} mL ` +
       `is above the ` +
@@ -1288,14 +1404,18 @@ function evaluateBagCapacity() {
    SENSOR DATA
 ===================================== */
 
+
 function normalizeReading(
   input
 ) {
 
   if (
-    !input ||
+    !input
+
+    ||
+
     typeof input !==
-      'object'
+    'object'
   ) {
 
     return null;
@@ -1306,11 +1426,17 @@ function normalizeReading(
   const volume =
     Number(
 
-      input.volume ??
+      input.volume
 
-      input.volume_ml ??
+      ??
 
-      input.totalVolumeMl ??
+      input.volume_ml
+
+      ??
+
+      input.totalVolumeMl
+
+      ??
 
       input.total_volume_ml
 
@@ -1332,42 +1458,101 @@ function normalizeReading(
 
     volume,
 
+
     pulses:
+
       Number(
-        input.pulses ??
-        input.pulseCount ??
-        input.pulse_count ??
+
+        input.pulses
+
+        ??
+
+        input.pulseCount
+
+        ??
+
+        input.pulse_count
+
+        ??
+
         0
+
       ),
+
 
     turbidityRaw:
+
       Number(
-        input.turbidityRaw ??
-        input.turbidity_raw ??
-        input.raw ??
+
+        input.turbidityRaw
+
+        ??
+
+        input.turbidity_raw
+
+        ??
+
+        input.raw
+
+        ??
+
         0
+
       ),
+
 
     vout:
+
       Number(
-        input.vout ??
-        input.Vout ??
+
+        input.vout
+
+        ??
+
+        input.Vout
+
+        ??
+
         0
+
       ),
+
 
     vin:
+
       Number(
-        input.vin ??
-        input.Vin ??
-        input.turbidity_v ??
+
+        input.vin
+
+        ??
+
+        input.Vin
+
+        ??
+
+        input.turbidity_v
+
+        ??
+
         0
+
       ),
 
+
     clarity:
+
       String(
-        input.clarity ??
-        input.status ??
+
+        input.clarity
+
+        ??
+
+        input.status
+
+        ??
+
         'UNKNOWN'
+
       )
       .toUpperCase()
 
@@ -1407,6 +1592,7 @@ function acceptLiveReading(
 
   $('feed-time')
     .textContent =
+
       new Date()
         .toLocaleTimeString(
 
@@ -1445,7 +1631,7 @@ function acceptLiveReading(
       source;
 
 
-  processHourlySensorVolume(
+  processWindowSensorVolume(
     reading.volume
   );
 
@@ -1477,7 +1663,8 @@ function parsePrototypeLine(
 
   const clean =
     String(
-      line ||
+      line
+      ||
       ''
     )
     .trim();
@@ -1494,10 +1681,14 @@ function parsePrototypeLine(
 
   const parts =
     clean
-      .split(',')
+      .split(
+        ','
+      )
       .map(
+
         value =>
           value.trim()
+
       );
 
 
@@ -1526,7 +1717,7 @@ function parsePrototypeLine(
       parts;
 
 
-    const nums =
+    const numbers =
       [
 
         volume,
@@ -1546,7 +1737,7 @@ function parsePrototypeLine(
 
 
     if (
-      !nums.some(
+      !numbers.some(
         Number.isNaN
       )
     ) {
@@ -1556,19 +1747,19 @@ function parsePrototypeLine(
         {
 
           volume:
-            nums[0],
+            numbers[0],
 
           pulses:
-            nums[1],
+            numbers[1],
 
           turbidityRaw:
-            nums[2],
+            numbers[2],
 
           vout:
-            nums[3],
+            numbers[3],
 
           vin:
-            nums[4],
+            numbers[4],
 
           clarity:
             status
@@ -1589,6 +1780,11 @@ function parsePrototypeLine(
 }
 
 
+/* =====================================
+   DIRECT WEB SERIAL
+===================================== */
+
+
 async function connectSerial() {
 
   if (
@@ -1600,6 +1796,7 @@ async function connectSerial() {
 
     $('serial-status')
       .textContent =
+
         'Web Serial unavailable. ' +
         'Use desktop Chrome/Edge ' +
         'or use the separate Sensor Logger.';
@@ -1687,7 +1884,8 @@ async function connectSerial() {
 
 
       buffer +=
-        value ||
+        value
+        ||
         '';
 
 
@@ -1707,30 +1905,37 @@ async function connectSerial() {
 
     }
 
-  } catch (err) {
+  } catch (
+    error
+  ) {
 
     $('serial-status')
       .textContent =
+
         `Serial connection not completed: ` +
-        `${err.message || err}`;
+        `${error.message || error}`;
 
   }
 
 }
 
 
-/* DEMO SENSOR READING */
+/* =====================================
+   DEMO SENSOR READING
+===================================== */
+
 
 function simulateReading() {
 
   /*
-    For demo mode, ensure the first
-    +250 mL is counted as an increment.
+    +15 mL is useful with the
+    demonstration 10–30 mL /
+    3-minute threshold.
   */
 
   if (
     state.lastSensorTotal ===
-      null
+    null
 
     ||
 
@@ -1741,7 +1946,8 @@ function simulateReading() {
 
     state.lastSensorTotal =
       Number(
-        state.reading.volume ||
+        state.reading.volume
+        ||
         0
       );
 
@@ -1764,42 +1970,73 @@ function simulateReading() {
     {
 
       volume:
+
         Number(
-          state.reading.volume ||
+          state.reading.volume
+          ||
           0
         )
+
         +
-        250,
+
+        15,
+
 
       pulses:
+
         Number(
-          state.reading.pulses ||
+          state.reading.pulses
+          ||
           0
         )
+
         +
-        1120,
+
+        70,
+
 
       turbidityRaw:
-        1720 +
+
+        1720
+
+        +
+
         Math.floor(
-          Math.random() *
+
+          Math.random()
+          *
           40
+
         ),
 
+
       vout:
-        1.36 +
-        Math.random() *
-        .06,
+
+        1.36
+
+        +
+
+        Math.random()
+        *
+        0.06,
+
 
       vin:
-        2.04 +
-        Math.random() *
-        .09,
+
+        2.04
+
+        +
+
+        Math.random()
+        *
+        0.09,
+
 
       clarity:
         'CLOUDY'
 
     },
+
 
     'Demo feed'
 
@@ -1809,8 +2046,9 @@ function simulateReading() {
 
 
 /* =====================================
-   HOURLY FLUID BALANCE
+   STORAGE
 ===================================== */
+
 
 function loadFluidRows() {
 
@@ -1822,7 +2060,9 @@ function loadFluidRows() {
         localStorage.getItem(
           STORAGE_ROWS
         )
+
         ||
+
         '[]'
 
       );
@@ -1831,10 +2071,18 @@ function loadFluidRows() {
     return Array.isArray(
       rows
     )
-      ? rows
-      : [];
 
-  } catch (_) {
+      ?
+
+      rows
+
+      :
+
+      [];
+
+  } catch (
+    error
+  ) {
 
     return [];
 
@@ -1858,52 +2106,130 @@ function saveFluidRows() {
 }
 
 
-function hourKey(
+/* =====================================
+   3-MINUTE MONITORING WINDOWS
+===================================== */
+
+
+/*
+  THIS IS THE MAIN CHANGE.
+
+  When MONITORING_WINDOW_MINUTES = 3:
+
+  13:00–13:02
+  13:03–13:05
+  13:06–13:08
+  etc.
+*/
+
+
+function windowKey(
   date =
     new Date()
 ) {
 
-  const d =
+  const current =
     new Date(
       date
     );
 
 
-  d.setMinutes(
+  const bucketStartMinute =
+
+    Math.floor(
+
+      current.getMinutes()
+      /
+      MONITORING_WINDOW_MINUTES
+
+    )
+
+    *
+
+    MONITORING_WINDOW_MINUTES;
+
+
+  current.setMinutes(
+
+    bucketStartMinute,
+
     0,
-    0,
+
     0
+
   );
 
 
-  return d.toISOString();
+  return current.toISOString();
 
 }
 
 
-function hourLabel(
+function windowLabel(
   key
 ) {
 
-  const d =
+  const start =
     new Date(
       key
     );
 
 
+  const end =
+    new Date(
+
+      start.getTime()
+
+      +
+
+      (
+        MONITORING_WINDOW_MINUTES
+        -
+        1
+      )
+
+      *
+
+      60
+
+      *
+
+      1000
+
+    );
+
+
+  const format =
+    date =>
+
+      `${String(
+        date.getHours()
+      )
+      .padStart(
+        2,
+        '0'
+      )}:` +
+
+      `${String(
+        date.getMinutes()
+      )
+      .padStart(
+        2,
+        '0'
+      )}`;
+
+
   return (
 
-    String(
-      d.getHours()
-    )
-    .padStart(
-      2,
-      '0'
-    )
+    `${format(start)}`
 
     +
 
-    '00'
+    `–`
+
+    +
+
+    `${format(end)}`
 
   );
 
@@ -1912,33 +2238,41 @@ function hourLabel(
 
 function makeRow(
   key =
-    hourKey()
+    windowKey()
 ) {
 
   return {
 
     key,
 
+
     oral:
       '',
+
 
     ivFluids:
       '',
 
+
     ivMeds:
       '',
+
 
     urine:
       0,
 
+
     drain:
       '',
+
 
     vomit:
       '',
 
+
     initials:
       '',
+
 
     sensorSeen:
       false
@@ -1951,15 +2285,17 @@ function makeRow(
 function getOrCreateCurrentRow() {
 
   const key =
-    hourKey();
+    windowKey();
 
 
   let row =
     state.fluidRows
       .find(
+
         current =>
           current.key ===
           key
+
       );
 
 
@@ -1982,7 +2318,10 @@ function getOrCreateCurrentRow() {
     state.fluidRows
       .sort(
 
-        (a, b) =>
+        (
+          a,
+          b
+        ) =>
 
           new Date(
             a.key
@@ -2021,18 +2360,23 @@ function asNumber(
     number
   )
 
-    ? number
+    ?
 
-    : 0;
+    number
+
+    :
+
+    0;
 
 }
 
 
 /* =====================================
-   AUTOMATIC HOURLY URINE
+   AUTOMATIC URINE LOGGING
 ===================================== */
 
-function processHourlySensorVolume(
+
+function processWindowSensorVolume(
   cumulativeVolume
 ) {
 
@@ -2046,8 +2390,11 @@ function processHourlySensorVolume(
     !Number.isFinite(
       current
     )
+
     ||
-    current < 0
+
+    current <
+    0
   ) {
 
     return;
@@ -2064,17 +2411,17 @@ function processHourlySensorVolume(
 
 
   /*
-    First live reading establishes
-    the baseline.
+    First sensor value is used
+    as the baseline.
 
-    This avoids incorrectly assigning
-    old cumulative urine to the
-    current hour when the app opens.
+    This prevents old cumulative
+    urine being counted in the
+    current 3-minute period.
   */
 
   if (
     state.lastSensorTotal ===
-      null
+    null
 
     ||
 
@@ -2101,7 +2448,7 @@ function processHourlySensorVolume(
     saveFluidRows();
 
 
-    evaluateCompletedHours();
+    evaluateCompletedWindows();
 
 
     return;
@@ -2117,13 +2464,12 @@ function processHourlySensorVolume(
 
 
   /*
-    If the Nesso counter becomes
-    smaller, assume the device
-    counter was reset.
+    Sensor reset.
   */
 
   if (
-    current + 0.5 <
+    current +
+    0.5 <
     previous
   ) {
 
@@ -2138,9 +2484,9 @@ function processHourlySensorVolume(
       'Nesso N1 volume counter reset',
 
       'A lower cumulative sensor value was received. ' +
-      'Hourly logging continued from the new counter.',
+      'Monitoring continued from the new counter.',
 
-      'hourly'
+      'window'
 
     );
 
@@ -2169,8 +2515,8 @@ function processHourlySensorVolume(
 
 
   /*
-    Add only NEW urine volume
-    to the current hourly row.
+    Add only NEW urine produced
+    during this period.
   */
 
   if (
@@ -2184,9 +2530,11 @@ function processHourlySensorVolume(
   ) {
 
     row.urine =
+
       Math.round(
 
         (
+
           asNumber(
             row.urine
           )
@@ -2194,6 +2542,7 @@ function processHourlySensorVolume(
           +
 
           delta
+
         )
 
         *
@@ -2213,11 +2562,11 @@ function processHourlySensorVolume(
 
 
   /*
-    HIGH hourly output can
-    alert immediately.
+    HIGH output can alert
+    immediately.
   */
 
-  evaluateHourlyUrine(
+  evaluateUrineWindow(
 
     row,
 
@@ -2227,27 +2576,31 @@ function processHourlySensorVolume(
 
 
   /*
-    LOW hourly output is checked
-    for completed hours.
+    LOW output is checked
+    for completed windows.
   */
 
-  evaluateCompletedHours();
+  evaluateCompletedWindows();
 
 }
 
 
 /* =====================================
-   HOURLY THRESHOLD ALERTS
+   3-MINUTE URINE THRESHOLDS
 ===================================== */
 
-function evaluateHourlyUrine(
+
+function evaluateUrineWindow(
   row,
-  hourCompleted =
+  windowCompleted =
     false
 ) {
 
   if (
-    !row ||
+    !row
+
+    ||
+
     !row.sensorSeen
   ) {
 
@@ -2263,22 +2616,26 @@ function evaluateHourlyUrine(
 
 
   const min =
-    state.hourlyLimits.minMl;
+    state.urineLimits.minMl;
 
 
   const max =
-    state.hourlyLimits.maxMl;
+    state.urineLimits.maxMl;
 
 
   const label =
-    hourLabel(
+    windowLabel(
       row.key
     );
 
 
   /*
-    HIGH OUTPUT:
-    Alert immediately.
+    HIGH urine output.
+
+    This can alert immediately
+    because once the upper
+    threshold is exceeded it
+    cannot become lower.
   */
 
   if (
@@ -2287,23 +2644,25 @@ function evaluateHourlyUrine(
   ) {
 
     const message =
+
       `${label}: ` +
       `${urine.toFixed(1)} mL ` +
-      `has been recorded this hour. ` +
-      `Upper hourly threshold is ` +
-      `${max} mL/hour.`;
+      `has been recorded. ` +
+      `Upper ${MONITORING_WINDOW_MINUTES}-minute ` +
+      `threshold is ${max} mL.`;
 
 
     const added =
       addNotification(
 
-        `hour-high-${row.key}-${max}`,
+        `window-high-${row.key}-${max}`,
 
-        'High hourly urine output',
+        `High urine output in ` +
+        `${MONITORING_WINDOW_MINUTES}-minute window`,
 
         message,
 
-        'hourly'
+        'window'
 
       );
 
@@ -2314,7 +2673,8 @@ function evaluateHourlyUrine(
 
       showMainAlert(
 
-        'High hourly urine output',
+        `High urine output in ` +
+        `${MONITORING_WINDOW_MINUTES}-minute window`,
 
         message
 
@@ -2326,13 +2686,17 @@ function evaluateHourlyUrine(
 
 
   /*
-    LOW OUTPUT:
-    Normally evaluate after
-    the hour has finished.
+    LOW urine output.
+
+    Do not alert while the
+    period is still running.
+
+    Alert only when the window
+    is completed.
   */
 
   if (
-    hourCompleted
+    windowCompleted
 
     &&
 
@@ -2341,23 +2705,25 @@ function evaluateHourlyUrine(
   ) {
 
     const message =
+
       `${label}: ` +
       `${urine.toFixed(1)} mL ` +
       `was recorded. ` +
-      `Lower hourly threshold is ` +
-      `${min} mL/hour.`;
+      `Lower ${MONITORING_WINDOW_MINUTES}-minute ` +
+      `threshold is ${min} mL.`;
 
 
     const added =
       addNotification(
 
-        `hour-low-${row.key}-${min}`,
+        `window-low-${row.key}-${min}`,
 
-        'Low hourly urine output',
+        `Low urine output in ` +
+        `${MONITORING_WINDOW_MINUTES}-minute window`,
 
         message,
 
-        'hourly'
+        'window'
 
       );
 
@@ -2368,7 +2734,8 @@ function evaluateHourlyUrine(
 
       showMainAlert(
 
-        'Low hourly urine output',
+        `Low urine output in ` +
+        `${MONITORING_WINDOW_MINUTES}-minute window`,
 
         message
 
@@ -2381,10 +2748,10 @@ function evaluateHourlyUrine(
 }
 
 
-function evaluateCompletedHours() {
+function evaluateCompletedWindows() {
 
-  const current =
-    hourKey();
+  const currentWindow =
+    windowKey();
 
 
   state.fluidRows
@@ -2393,14 +2760,14 @@ function evaluateCompletedHours() {
 
         if (
           row.key !==
-            current
+          currentWindow
 
           &&
 
           row.sensorSeen
         ) {
 
-          evaluateHourlyUrine(
+          evaluateUrineWindow(
 
             row,
 
@@ -2416,15 +2783,17 @@ function evaluateCompletedHours() {
 }
 
 
-function getCurrentHourRow() {
+function getCurrentWindowRow() {
 
   return (
 
     state.fluidRows
       .find(
+
         row =>
           row.key ===
-          hourKey()
+          windowKey()
+
       )
 
     ||
@@ -2436,10 +2805,10 @@ function getCurrentHourRow() {
 }
 
 
-function getCurrentHourlyStatus() {
+function getCurrentWindowStatus() {
 
   const row =
-    getCurrentHourRow();
+    getCurrentWindowRow();
 
 
   const urine =
@@ -2449,11 +2818,11 @@ function getCurrentHourlyStatus() {
 
 
   const min =
-    state.hourlyLimits.minMl;
+    state.urineLimits.minMl;
 
 
   const max =
-    state.hourlyLimits.maxMl;
+    state.urineLimits.maxMl;
 
 
   if (
@@ -2492,10 +2861,9 @@ function getCurrentHourlyStatus() {
 
 
   /*
-    Current-hour value can be
-    below the lower threshold
-    without yet being an alert,
-    because the hour is still active.
+    During an active 3-minute
+    window this is NOT yet a
+    low-output alert.
   */
 
   if (
@@ -2519,7 +2887,7 @@ function getCurrentHourlyStatus() {
   return {
 
     label:
-      'Within hourly range',
+      'Within configured range',
 
     level:
       'success'
@@ -2529,7 +2897,7 @@ function getCurrentHourlyStatus() {
 }
 
 
-function saveHourlyThresholds(
+function saveWindowThresholds(
   minValue,
   maxValue
 ) {
@@ -2569,7 +2937,7 @@ function saveHourlyThresholds(
   ) {
 
     toast(
-      'Check the hourly threshold values'
+      'Check the monitoring threshold values'
     );
 
 
@@ -2578,17 +2946,17 @@ function saveHourlyThresholds(
   }
 
 
-  state.hourlyLimits.minMl =
+  state.urineLimits.minMl =
     min;
 
 
-  state.hourlyLimits.maxMl =
+  state.urineLimits.maxMl =
     max;
 
 
   localStorage.setItem(
 
-    STORAGE_HOURLY_MIN,
+    STORAGE_WINDOW_MIN,
 
     String(
       min
@@ -2599,7 +2967,7 @@ function saveHourlyThresholds(
 
   localStorage.setItem(
 
-    STORAGE_HOURLY_MAX,
+    STORAGE_WINDOW_MAX,
 
     String(
       max
@@ -2610,15 +2978,15 @@ function saveHourlyThresholds(
 
   toast(
 
-    `Hourly range saved: ` +
-    `${min}–${max} mL/hour`
+    `${MONITORING_WINDOW_MINUTES}-minute range saved: ` +
+    `${min}–${max} mL`
 
   );
 
 
-  evaluateHourlyUrine(
+  evaluateUrineWindow(
 
-    getCurrentHourRow(),
+    getCurrentWindowRow(),
 
     false
 
@@ -2637,6 +3005,7 @@ function saveHourlyThresholds(
    DASHBOARD
 ===================================== */
 
+
 function updateDashboard() {
 
   const reading =
@@ -2651,22 +3020,24 @@ function updateDashboard() {
     getCurrentBagVolume();
 
 
-  const hourlyRow =
-    getCurrentHourRow();
+  const currentRow =
+    getCurrentWindowRow();
 
 
-  const hourly =
-    getCurrentHourlyStatus();
+  const windowStatus =
+    getCurrentWindowStatus();
 
 
   /*
-    Sensor fields
+    SENSOR DATA
   */
 
   $('sensor-total-value')
     .textContent =
+
       Number(
-        reading.volume ||
+        reading.volume
+        ||
         0
       )
       .toFixed(
@@ -2676,28 +3047,38 @@ function updateDashboard() {
 
   $('pulses-value')
     .textContent =
+
       Math.round(
+
         Number(
-          reading.pulses ||
+          reading.pulses
+          ||
           0
         )
+
       );
 
 
   $('raw-value')
     .textContent =
+
       Math.round(
+
         Number(
-          reading.turbidityRaw ||
+          reading.turbidityRaw
+          ||
           0
         )
+
       );
 
 
   $('vout-value')
     .textContent =
+
       Number(
-        reading.vout ||
+        reading.vout
+        ||
         0
       )
       .toFixed(
@@ -2707,8 +3088,10 @@ function updateDashboard() {
 
   $('vin-value')
     .textContent =
+
       Number(
-        reading.vin ||
+        reading.vin
+        ||
         0
       )
       .toFixed(
@@ -2718,23 +3101,28 @@ function updateDashboard() {
 
   $('clarity-value')
     .textContent =
-      reading.clarity ||
+
+      reading.clarity
+      ||
       'UNKNOWN';
 
 
   /*
-    Bag capacity display
+    BAG CAPACITY DISPLAY
   */
 
   $('bag-volume-value')
     .textContent =
-      bagVolume.toFixed(
-        1
-      );
+
+      bagVolume
+        .toFixed(
+          1
+        );
 
 
   $('bag-percent')
     .textContent =
+
       Math.max(
         0,
         bag.percentage
@@ -2750,9 +3138,13 @@ function updateDashboard() {
       state.bag.capacityMl >
       0
 
-        ? state.bag.capacityMl
+        ?
 
-        : '—';
+        state.bag.capacityMl
+
+        :
+
+        '—';
 
 
   $('bag-fill-status')
@@ -2768,6 +3160,7 @@ function updateDashboard() {
   $('bag-progress')
     .style
     .width =
+
       `${Math.min(
         Math.max(
           bag.percentage,
@@ -2868,19 +3261,25 @@ function updateDashboard() {
       'success',
 
       bag.level ===
-        'normal'
+      'normal'
 
     );
 
 
   /*
-    Hourly urine display
+    3-MINUTE URINE DISPLAY
+
+    The HTML element IDs still
+    contain the word "hourly"
+    to avoid changing the rest
+    of your existing HTML.
   */
 
   $('hourly-urine-value')
     .textContent =
+
       asNumber(
-        hourlyRow.urine
+        currentRow.urine
       )
       .toFixed(
         1
@@ -2889,14 +3288,21 @@ function updateDashboard() {
 
   $('hourly-range-display')
     .textContent =
-      `${state.hourlyLimits.minMl}` +
-      `–` +
-      `${state.hourlyLimits.maxMl}`;
+
+      `${state.urineLimits.minMl}`
+
+      +
+
+      `–`
+
+      +
+
+      `${state.urineLimits.maxMl}`;
 
 
   $('hourly-status')
     .textContent =
-      hourly.label;
+      windowStatus.label;
 
 
   updateChartLiveStrip();
@@ -2912,16 +3318,17 @@ function updateDashboard() {
    SETTINGS
 ===================================== */
 
+
 function syncSettings() {
 
   $('hourly-min-input')
     .value =
-      state.hourlyLimits.minMl;
+      state.urineLimits.minMl;
 
 
   $('hourly-max-input')
     .value =
-      state.hourlyLimits.maxMl;
+      state.urineLimits.maxMl;
 
 
   updateBagIdentityUi();
@@ -2932,6 +3339,7 @@ function syncSettings() {
 /* =====================================
    ALERT UI
 ===================================== */
+
 
 function showMainAlert(
   title,
@@ -2962,15 +3370,17 @@ function addNotification(
   title,
   message,
   type =
-    'hourly'
+    'window'
 ) {
 
   if (
     state.notifications
       .some(
+
         notification =>
           notification.key ===
           key
+
       )
   ) {
 
@@ -3034,9 +3444,10 @@ function renderNotifications() {
         </strong>
 
         <p>
-          Bag-capacity and hourly
-          urine-output alerts will
-          appear here.
+          Bag-capacity and
+          ${MONITORING_WINDOW_MINUTES}-minute
+          urine-output alerts
+          will appear here.
         </p>
 
       </div>
@@ -3050,8 +3461,10 @@ function renderNotifications() {
 
 
   list.innerHTML =
+
     state.notifications
       .map(
+
         notification => `
 
           <div
@@ -3082,6 +3495,7 @@ function renderNotifications() {
           </div>
 
         `
+
       )
       .join('');
 
@@ -3091,6 +3505,7 @@ function renderNotifications() {
 /* =====================================
    FLUID BALANCE CALCULATIONS
 ===================================== */
+
 
 function calculateFluidRows() {
 
@@ -3103,12 +3518,17 @@ function calculateFluidRows() {
 
 
   return [
+
     ...state.fluidRows
+
   ]
 
   .sort(
 
-    (a, b) =>
+    (
+      a,
+      b
+    ) =>
 
       new Date(
         a.key
@@ -3167,33 +3587,51 @@ function calculateFluidRows() {
 
         ...row,
 
+
         runningInput:
+
           Math.round(
-            runningInput *
+            runningInput
+            *
             10
           )
+
           /
+
           10,
+
 
         runningOutput:
+
           Math.round(
-            runningOutput *
+            runningOutput
+            *
             10
           )
+
           /
+
           10,
 
+
         balance:
+
           Math.round(
+
             (
               runningInput
               -
               runningOutput
             )
+
             *
+
             10
+
           )
+
           /
+
           10
 
       };
@@ -3214,7 +3652,8 @@ function inputCell(
 
   const value =
     escapeHtml(
-      row[field] ??
+      row[field]
+      ??
       ''
     );
 
@@ -3224,9 +3663,13 @@ function inputCell(
     field ===
     'initials'
 
-      ? 'text'
+      ?
 
-      : 'number';
+      'text'
+
+      :
+
+      'number';
 
 
   const extra =
@@ -3234,9 +3677,13 @@ function inputCell(
     type ===
     'number'
 
-      ? 'min="0" step="1" inputmode="decimal"'
+      ?
 
-      : 'maxlength="4"';
+      'min="0" step="1" inputmode="decimal"'
+
+      :
+
+      'maxlength="4"';
 
 
   return `
@@ -3267,14 +3714,21 @@ function formatNumber(
 ) {
 
   const value =
+
     Math.round(
+
       asNumber(
         number
       )
+
       *
+
       10
+
     )
+
     /
+
     10;
 
 
@@ -3282,13 +3736,17 @@ function formatNumber(
     value
   )
 
-    ? String(
-        value
-      )
+    ?
 
-    : value.toFixed(
-        1
-      );
+    String(
+      value
+    )
+
+    :
+
+    value.toFixed(
+      1
+    );
 
 }
 
@@ -3298,25 +3756,36 @@ function formatBalance(
 ) {
 
   const value =
+
     Math.round(
+
       asNumber(
         number
       )
+
       *
+
       10
+
     )
+
     /
+
     10;
 
 
   return value >
     0
 
-    ? `+${formatNumber(value)}`
+    ?
 
-    : formatNumber(
-        value
-      );
+    `+${formatNumber(value)}`
+
+    :
+
+    formatNumber(
+      value
+    );
 
 }
 
@@ -3324,6 +3793,7 @@ function formatBalance(
 /* =====================================
    RENDER FLUID BALANCE CHART
 ===================================== */
+
 
 function renderFluidChart() {
 
@@ -3354,6 +3824,7 @@ function renderFluidChart() {
 
 
   body.innerHTML =
+
     rows
       .map(
         row => `
@@ -3362,100 +3833,63 @@ function renderFluidChart() {
 
             <td class="time-cell">
 
-              ${hourLabel(row.key)}
+              ${windowLabel(row.key)}
 
             </td>
 
 
             <td>
 
-              ${
-                inputCell(
-                  row,
-                  'oral'
-                )
-              }
+              ${inputCell(row, 'oral')}
 
             </td>
 
 
             <td>
 
-              ${
-                inputCell(
-                  row,
-                  'ivFluids'
-                )
-              }
+              ${inputCell(row, 'ivFluids')}
 
             </td>
 
 
             <td>
 
-              ${
-                inputCell(
-                  row,
-                  'ivMeds'
-                )
-              }
+              ${inputCell(row, 'ivMeds')}
 
             </td>
 
 
             <td class="calc-cell">
 
-              ${
-                formatNumber(
-                  row.runningInput
-                )
-              }
+              ${formatNumber(row.runningInput)}
 
             </td>
 
 
             <td class="auto-urine">
 
-              ${
-                formatNumber(
-                  row.urine
-                )
-              }
+              ${formatNumber(row.urine)}
 
             </td>
 
 
             <td>
 
-              ${
-                inputCell(
-                  row,
-                  'drain'
-                )
-              }
+              ${inputCell(row, 'drain')}
 
             </td>
 
 
             <td>
 
-              ${
-                inputCell(
-                  row,
-                  'vomit'
-                )
-              }
+              ${inputCell(row, 'vomit')}
 
             </td>
 
 
             <td class="calc-cell">
 
-              ${
-                formatNumber(
-                  row.runningOutput
-                )
-              }
+              ${formatNumber(row.runningOutput)}
 
             </td>
 
@@ -3464,20 +3898,21 @@ function renderFluidChart() {
               class="
                 calc-cell
                 ${
-                  row.balance < 0
+                  row.balance <
+                  0
 
-                    ? 'balance-negative'
+                    ?
 
-                    : 'balance-positive'
+                    'balance-negative'
+
+                    :
+
+                    'balance-positive'
                 }
               "
             >
 
-              ${
-                formatBalance(
-                  row.balance
-                )
-              }
+              ${formatBalance(row.balance)}
 
             </td>
 
@@ -3546,6 +3981,7 @@ function renderFluidChart() {
 
     $('summary-input')
       .textContent =
+
         formatNumber(
           last.runningInput
         );
@@ -3553,6 +3989,7 @@ function renderFluidChart() {
 
     $('summary-output')
       .textContent =
+
         formatNumber(
           last.runningOutput
         );
@@ -3560,6 +3997,7 @@ function renderFluidChart() {
 
     $('summary-balance')
       .textContent =
+
         `${formatBalance(
           last.balance
         )} mL`;
@@ -3607,9 +4045,11 @@ function handleFluidInput(
   const row =
     state.fluidRows
       .find(
+
         current =>
           current.key ===
           element.dataset.row
+
       );
 
 
@@ -3631,15 +4071,20 @@ function handleFluidInput(
     field ===
     'initials'
 
-      ? element
-          .value
-          .toUpperCase()
-          .trim()
+      ?
 
-      : element.value;
+      element
+        .value
+        .toUpperCase()
+        .trim()
+
+      :
+
+      element.value;
 
 
   saveFluidRows();
+
 
   renderFluidChart();
 
@@ -3660,15 +4105,16 @@ function updateChartLiveStrip() {
 
 
   const row =
-    getCurrentHourRow();
+    getCurrentWindowRow();
 
 
-  const hourly =
-    getCurrentHourlyStatus();
+  const status =
+    getCurrentWindowStatus();
 
 
   $('chart-hourly-volume')
     .textContent =
+
       asNumber(
         row.urine
       )
@@ -3679,12 +4125,14 @@ function updateChartLiveStrip() {
 
   $('chart-source')
     .textContent =
-      state.liveSource;
+
+      `${state.liveSource} · ` +
+      `${MONITORING_WINDOW_MINUTES}-minute window`;
 
 
   $('chart-hourly-status')
     .textContent =
-      hourly.label;
+      status.label;
 
 
   $('chart-hourly-status')
@@ -3693,7 +4141,7 @@ function updateChartLiveStrip() {
 
       'success',
 
-      hourly.level ===
+      status.level ===
       'success'
 
     );
@@ -3705,7 +4153,7 @@ function updateChartLiveStrip() {
 
       'warning',
 
-      hourly.level ===
+      status.level ===
       'warning'
 
     );
@@ -3717,7 +4165,7 @@ function updateChartLiveStrip() {
 
       'danger',
 
-      hourly.level ===
+      status.level ===
       'danger'
 
     );
@@ -3729,11 +4177,16 @@ function addCurrentHourRow() {
 
   getOrCreateCurrentRow();
 
+
   renderFluidChart();
 
 
   toast(
-    'Current hour added'
+
+    `Current ` +
+    `${MONITORING_WINDOW_MINUTES}-minute ` +
+    `window added`
+
   );
 
 }
@@ -3742,6 +4195,7 @@ function addCurrentHourRow() {
 /* =====================================
    CSV EXPORT
 ===================================== */
+
 
 function exportFluidCsv() {
 
@@ -3752,7 +4206,7 @@ function exportFluidCsv() {
   const header =
     [
 
-      'Time',
+      'Monitoring_Window',
 
       'Oral_mL',
 
@@ -3794,9 +4248,7 @@ function exportFluidCsv() {
 
         [
 
-          hourLabel(
-            row.key
-          ),
+          `"${windowLabel(row.key)}"`,
 
           asNumber(
             row.oral
@@ -3829,7 +4281,8 @@ function exportFluidCsv() {
           row.balance,
 
           `"${String(
-            row.initials ||
+            row.initials
+            ||
             ''
           )
           .replaceAll(
@@ -3850,9 +4303,11 @@ function exportFluidCsv() {
     new Blob(
 
       [
+
         lines.join(
           '\n'
         )
+
       ],
 
       {
@@ -3882,6 +4337,7 @@ function exportFluidCsv() {
 
 
   link.download =
+
     `fluid-balance-` +
     `${state.bag.patientId || 'patient'}-` +
     `${new Date().toISOString().slice(0,10)}.csv`;
@@ -3894,6 +4350,7 @@ function exportFluidCsv() {
 
 
   link.click();
+
 
   link.remove();
 
@@ -3911,15 +4368,18 @@ function exportFluidCsv() {
 
 
 /* =====================================
-   RESET FLUID SESSION
+   RESET SESSION
 ===================================== */
+
 
 function resetFluidSession() {
 
   if (
     !confirm(
+
       'Start a new fluid-balance session? ' +
       'This clears the chart stored in this browser.'
+
     )
   ) {
 
@@ -3948,7 +4408,9 @@ function resetFluidSession() {
 
   getOrCreateCurrentRow();
 
+
   renderFluidChart();
+
 
   updateDashboard();
 
@@ -3963,6 +4425,7 @@ function resetFluidSession() {
 /* =====================================
    SENSOR LOGGER BRIDGE
 ===================================== */
+
 
 const TRUSTED_LOGGER_ORIGINS =
   new Set(
@@ -3995,7 +4458,7 @@ function handleBridgePayload(
     &&
 
     payload.type !==
-      'nesso-reading'
+    'nesso-reading'
   ) {
 
     return;
@@ -4004,7 +4467,8 @@ function handleBridgePayload(
 
 
   const reading =
-    payload.reading ||
+    payload.reading
+    ||
     payload;
 
 
@@ -4028,7 +4492,7 @@ window.addEventListener(
     const trusted =
 
       event.origin ===
-        window.location.origin
+      window.location.origin
 
       ||
 
@@ -4060,6 +4524,7 @@ window.addEventListener(
    EVENT LISTENERS
 ===================================== */
 
+
 $('login-form')
   .addEventListener(
 
@@ -4068,6 +4533,7 @@ $('login-form')
     event => {
 
       event.preventDefault();
+
 
       login();
 
@@ -4111,10 +4577,13 @@ $('notification-button')
 
     'click',
 
-    () =>
+    () => {
+
       showView(
         'notifications'
-      )
+      );
+
+    }
 
   );
 
@@ -4173,10 +4642,13 @@ document
 
         'click',
 
-        () =>
+        () => {
+
           showView(
             button.dataset.go
-          )
+          );
+
+        }
 
       );
 
@@ -4184,7 +4656,13 @@ document
   );
 
 
-/* SAVE HOURLY THRESHOLDS */
+/*
+  The HTML IDs still use
+  "hourly" in their names.
+
+  Functionally they are now
+  3-minute thresholds.
+*/
 
 $('hourly-threshold-form')
   .addEventListener(
@@ -4197,7 +4675,7 @@ $('hourly-threshold-form')
 
 
       if (
-        saveHourlyThresholds(
+        saveWindowThresholds(
 
           $('hourly-min-input')
             .value,
@@ -4220,11 +4698,12 @@ $('hourly-threshold-form')
 
 
 /*
-  DEMONSTRATION BUTTON:
+  DEMO BUTTON
 
-  Allows the low-output alert
-  to be shown without waiting
-  until the current hour ends.
+  Allows you to demonstrate
+  LOW urine output immediately
+  rather than waiting for the
+  full 3 minutes.
 */
 
 $('evaluate-hour-now')
@@ -4235,7 +4714,7 @@ $('evaluate-hour-now')
     () => {
 
       const row =
-        getCurrentHourRow();
+        getCurrentWindowRow();
 
 
       row.sensorSeen =
@@ -4249,7 +4728,7 @@ $('evaluate-hour-now')
         state.notifications.length;
 
 
-      evaluateHourlyUrine(
+      evaluateUrineWindow(
 
         row,
 
@@ -4259,9 +4738,9 @@ $('evaluate-hour-now')
 
 
       /*
-        If neither high nor low,
-        show that the value is
-        within the configured range.
+        If neither LOW nor HIGH,
+        show that the result is
+        within range.
       */
 
       if (
@@ -4276,28 +4755,32 @@ $('evaluate-hour-now')
 
 
         const min =
-          state.hourlyLimits.minMl;
+          state.urineLimits.minMl;
 
 
         const max =
-          state.hourlyLimits.maxMl;
+          state.urineLimits.maxMl;
 
 
         if (
-          urine >= min
+          urine >=
+          min
 
           &&
 
-          urine <= max
+          urine <=
+          max
         ) {
 
           showMainAlert(
 
-            'Hourly urine within configured range',
+            `${MONITORING_WINDOW_MINUTES}-minute ` +
+            `urine within configured range`,
 
             `${urine.toFixed(1)} mL ` +
             `is within the configured ` +
-            `${min}–${max} mL/hour range.`
+            `${min}–${max} mL per ` +
+            `${MONITORING_WINDOW_MINUTES} minutes.`
 
           );
 
@@ -4308,11 +4791,16 @@ $('evaluate-hour-now')
 
       updateDashboard();
 
+
       renderFluidChart();
 
 
       toast(
-        'Current hour evaluated'
+
+        `Current ` +
+        `${MONITORING_WINDOW_MINUTES}-minute ` +
+        `window evaluated`
+
       );
 
     }
@@ -4351,16 +4839,20 @@ $('reset-fluid-session')
 
 
 /*
-  Re-check completed hours
-  even if no additional urine
-  reading has arrived.
+  Every 15 seconds check whether
+  a previous 3-minute window has
+  finished.
+
+  This makes the LOW alert appear
+  even if there has not just been
+  another sensor pulse.
 */
 
 setInterval(
 
-  evaluateCompletedHours,
+  evaluateCompletedWindows,
 
-  60000
+  15000
 
 );
 
@@ -4369,12 +4861,17 @@ setInterval(
    START APPLICATION
 ===================================== */
 
+
 getOrCreateCurrentRow();
+
 
 updateBagIdentityUi();
 
+
 syncSettings();
 
+
 updateDashboard();
+
 
 renderFluidChart();
