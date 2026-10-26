@@ -14,9 +14,7 @@
     content="#0b5f6d"
   >
 
-  <title>
-    Smart Urine Monitoring
-  </title>
+  <title>Smart Urine Monitoring</title>
 
   <link
     rel="stylesheet"
@@ -34,9 +32,7 @@
   </div>
 
 
-  <!-- =====================================
-       LOGIN
-  ====================================== -->
+  <!-- LOGIN -->
 
   <section
     id="login-screen"
@@ -120,9 +116,7 @@
   </section>
 
 
-  <!-- =====================================
-       MAIN APPLICATION
-  ====================================== -->
+  <!-- MAIN APPLICATION -->
 
   <section
     id="app-screen"
@@ -161,9 +155,7 @@
     </header>
 
 
-    <!-- =====================================
-         PATIENT SELECTION
-    ====================================== -->
+    <!-- PATIENT SELECTION -->
 
     <div
       class="view"
@@ -183,8 +175,7 @@
         <p>
           Select the patient before attaching
           and scanning a urinary bag.
-          Each patient has an independent
-          monitoring record.
+          Each patient has an independent monitoring record.
         </p>
 
       </div>
@@ -201,6 +192,7 @@
             Demo Nurse
           </strong>
         </div>
+
 
         <div>
           <span>
@@ -223,9 +215,7 @@
     </div>
 
 
-    <!-- =====================================
-         SCAN BAG
-    ====================================== -->
+    <!-- SCAN BAG -->
 
     <div
       class="view"
@@ -234,18 +224,18 @@
 
       <div class="selected-patient-banner card">
 
-        <div>
+        <div class="selected-patient-copy">
 
           <p class="eyebrow">
             SELECTED PATIENT
           </p>
 
           <strong id="scan-patient-name">
-            —
+            No patient selected
           </strong>
 
           <small id="scan-patient-details">
-            —
+            Return to patient list
           </small>
 
         </div>
@@ -268,8 +258,8 @@
         </h3>
 
         <p>
-          Scan the QR code only after confirming
-          the correct patient.
+          Confirm the patient above,
+          then scan the urinary bag QR code.
         </p>
 
       </div>
@@ -289,13 +279,7 @@
           class="camera-placeholder"
         >
 
-          <div class="scan-frame">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+          <div class="scan-frame"></div>
 
           <p>
             Position the urinary bag QR code
@@ -311,7 +295,7 @@
         id="scan-message"
         class="status-line"
       >
-        Camera is off.
+        Select a patient first.
       </div>
 
 
@@ -346,9 +330,7 @@
     </div>
 
 
-    <!-- =====================================
-         PATIENT DETAILS
-    ====================================== -->
+    <!-- PATIENT DETAILS -->
 
     <div
       class="view"
@@ -473,9 +455,7 @@
     </div>
 
 
-    <!-- =====================================
-         LIVE DASHBOARD
-    ====================================== -->
+    <!-- LIVE DASHBOARD -->
 
     <div
       class="view"
@@ -610,14 +590,25 @@
         <p class="progress-caption">
 
           <span>
-            <strong id="bag-percent">0</strong>
+
+            <strong id="bag-percent">
+              0
+            </strong>
+
             % full
+
           </span>
 
           <span>
+
             Capacity:
-            <strong id="bag-capacity-display">—</strong>
+
+            <strong id="bag-capacity-display">
+              —
+            </strong>
+
             mL
+
           </span>
 
         </p>
@@ -644,8 +635,13 @@
           </span>
 
           <strong>
-            <span id="hourly-urine-value">0.0</span>
+
+            <span id="hourly-urine-value">
+              0.0
+            </span>
+
             mL
+
           </strong>
 
           <small id="hourly-status">
@@ -662,9 +658,11 @@
           </span>
 
           <strong>
+
             <span id="hourly-range-display">
               50–150
             </span>
+
           </strong>
 
           <small>
@@ -694,7 +692,6 @@
 
           </div>
 
-
           <span id="feed-time">
             Waiting
           </span>
@@ -709,8 +706,13 @@
           </span>
 
           <strong>
-            <span id="sensor-total-value">0.0</span>
+
+            <span id="sensor-total-value">
+              0.0
+            </span>
+
             mL
+
           </strong>
 
         </div>
@@ -721,15 +723,18 @@
           <strong id="clarity-value">UNKNOWN</strong>
         </div>
 
+
         <div class="sensor-row">
           <span>Pulses</span>
           <strong id="pulses-value">0</strong>
         </div>
 
+
         <div class="sensor-row">
           <span>Turbidity raw</span>
           <strong id="raw-value">0</strong>
         </div>
+
 
         <div class="sensor-row">
 
@@ -741,6 +746,7 @@
           </strong>
 
         </div>
+
 
         <div class="sensor-row">
 
@@ -794,7 +800,7 @@
           </strong>
 
           <p>
-            Bag capacity alerts use a rising chime.
+            Bag-capacity alerts use a rising chime.
             Abnormal urine-production alerts use
             a separate urgent alarm.
           </p>
@@ -822,9 +828,7 @@
     </div>
 
 
-    <!-- =====================================
-         FLUID BALANCE CHART
-    ====================================== -->
+    <!-- FLUID BALANCE CHART -->
 
     <div
       class="view"
@@ -833,7 +837,7 @@
 
       <div class="selected-patient-banner card">
 
-        <div>
+        <div class="selected-patient-copy">
 
           <p class="eyebrow">
             FLUID BALANCE FOR
@@ -877,8 +881,13 @@
           </span>
 
           <strong>
-            <span id="chart-hourly-volume">0.0</span>
+
+            <span id="chart-hourly-volume">
+              0.0
+            </span>
+
             mL urine
+
           </strong>
 
           <small id="chart-source">
@@ -954,7 +963,9 @@
 
             <tr>
 
-              <th>Oral</th>
+              <th>
+                Oral
+              </th>
 
               <th>
                 IV
@@ -977,12 +988,18 @@
               <th class="auto-head">
                 Urine
                 <br>
-                <small>Auto</small>
+                <small>
+                  Auto
+                </small>
               </th>
 
-              <th>Drain</th>
+              <th>
+                Drain
+              </th>
 
-              <th>Vomit</th>
+              <th>
+                Vomit
+              </th>
 
               <th>
                 Running
@@ -995,8 +1012,7 @@
           </thead>
 
 
-          <tbody id="fluid-balance-body">
-          </tbody>
+          <tbody id="fluid-balance-body"></tbody>
 
         </table>
 
@@ -1005,8 +1021,8 @@
 
       <p class="table-hint">
         ↔ Swipe horizontally on a phone.
-        Urine cells are read-only and belong
-        only to the selected patient.
+        Urine cells are read-only and belong only
+        to the selected patient.
       </p>
 
 
@@ -1019,8 +1035,13 @@
           </span>
 
           <strong>
-            <span id="summary-input">0</span>
+
+            <span id="summary-input">
+              0
+            </span>
+
             mL
+
           </strong>
 
         </div>
@@ -1033,8 +1054,13 @@
           </span>
 
           <strong>
-            <span id="summary-output">0</span>
+
+            <span id="summary-output">
+              0
+            </span>
+
             mL
+
           </strong>
 
         </div>
@@ -1065,9 +1091,7 @@
     </div>
 
 
-    <!-- =====================================
-         WARD ALERTS
-    ====================================== -->
+    <!-- ALERTS -->
 
     <div
       class="view"
@@ -1101,9 +1125,7 @@
     </div>
 
 
-    <!-- =====================================
-         SETTINGS
-    ====================================== -->
+    <!-- SETTINGS -->
 
     <div
       class="view"
@@ -1118,8 +1140,7 @@
 
         <p>
           Bag capacity is obtained from the QR code.
-          Urine-production limits are configured
-          separately.
+          Urine-production limits are configured separately.
         </p>
 
       </div>
@@ -1133,26 +1154,41 @@
 
         <div>
           <span>Patient</span>
-          <strong id="settings-patient-name">None selected</strong>
+          <strong id="settings-patient-name">
+            None selected
+          </strong>
         </div>
 
         <div>
           <span>Patient ID</span>
-          <strong id="settings-patient-id">—</strong>
+          <strong id="settings-patient-id">
+            —
+          </strong>
         </div>
 
         <div>
           <span>Bag</span>
-          <strong id="settings-bag-id">—</strong>
+          <strong id="settings-bag-id">
+            —
+          </strong>
         </div>
 
         <div>
-          <span>Bag capacity</span>
+
+          <span>
+            Bag capacity
+          </span>
 
           <strong>
-            <span id="settings-bag-capacity">—</span>
+
+            <span id="settings-bag-capacity">
+              —
+            </span>
+
             mL
+
           </strong>
+
         </div>
 
       </div>
@@ -1281,9 +1317,7 @@
     </div>
 
 
-    <!-- =====================================
-         BOTTOM NAVIGATION
-    ====================================== -->
+    <!-- BOTTOM NAVIGATION -->
 
     <nav class="bottom-nav">
 
@@ -1365,4 +1399,5 @@
 <script src="app.js"></script>
 
 </body>
+
 </html>
