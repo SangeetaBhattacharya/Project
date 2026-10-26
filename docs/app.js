@@ -1,21 +1,10 @@
-/* =====================================
-   SMART URINE MONITORING PROTOTYPE
-
-   Demo configuration:
-   Bag capacity: 200 mL
-   Monitoring window: 3 minutes
-   Low threshold: < 50 mL
-   High threshold: > 150 mL
-===================================== */
-
-
 const MONITORING_WINDOW_MINUTES = 3;
 
 const DEFAULT_WINDOW_MIN_ML = 50;
 const DEFAULT_WINDOW_MAX_ML = 150;
 
 const STORAGE_PATIENT_RECORDS =
-  'smartUrinePatientRecordsV2';
+  'smartUrinePatientRecordsV3';
 
 const STORAGE_WINDOW_MIN =
   'smartUrine3MinMinMl';
@@ -24,24 +13,34 @@ const STORAGE_WINDOW_MAX =
   'smartUrine3MinMaxMl';
 
 
-const NURSE_WARD =
-  'Ward 5A';
-
-
 const DEMO_PATIENTS = [
 
   {
-    id: 'P-0001',
-    name: 'Aisha Rahman',
-    ward: 'Ward 5A',
-    bed: '12'
+    id:
+      'P-0001',
+
+    name:
+      'Aisha Rahman',
+
+    ward:
+      'Ward 5A',
+
+    bed:
+      '12'
   },
 
   {
-    id: 'P-0002',
-    name: 'John Miller',
-    ward: 'Ward 5A',
-    bed: '14'
+    id:
+      'P-0002',
+
+    name:
+      'John Miller',
+
+    ward:
+      'Ward 5A',
+
+    bed:
+      '14'
   }
 
 ];
@@ -81,7 +80,7 @@ const $ =
 
 
 /* =====================================
-   PATIENT RECORD CREATION
+   PATIENT STORAGE
 ===================================== */
 
 function createEmptyPatientRecord(
@@ -211,12 +210,6 @@ function normalisePatientRecord(
 
     bed:
       patient.bed,
-
-    /*
-      Monitoring must be explicitly
-      activated again by selecting the
-      patient and attaching the bag.
-    */
 
     monitoringActive:
       false,
@@ -440,7 +433,7 @@ const state = {
 
 
 /* =====================================
-   GENERAL HELPERS
+   HELPERS
 ===================================== */
 
 function escapeHtml(
@@ -593,30 +586,6 @@ function getSelectedRecord() {
 }
 
 
-function patientContextText(
-  patient
-) {
-
-  if (
-    !patient
-  ) {
-
-    return '';
-
-  }
-
-
-  return (
-
-    `${patient.name} · ` +
-    `${patient.id} · ` +
-    `Bed ${patient.bed}`
-
-  );
-
-}
-
-
 function patientInitials(
   name
 ) {
@@ -645,8 +614,32 @@ function patientInitials(
 }
 
 
+function patientContextText(
+  patient
+) {
+
+  if (
+    !patient
+  ) {
+
+    return '';
+
+  }
+
+
+  return (
+
+    `${patient.name} · ` +
+    `${patient.id} · ` +
+    `Bed ${patient.bed}`
+
+  );
+
+}
+
+
 /* =====================================
-   AUDIO
+   ALERT SOUNDS
 ===================================== */
 
 let audioContext =
@@ -762,7 +755,10 @@ function playTone(
 ) {
 
   if (
-    !audioContext ||
+    !audioContext
+
+    ||
+
     audioContext.state !==
       'running'
   ) {
@@ -849,8 +845,7 @@ function playTone(
 
 
 /*
-  BAG ALERT SOUND:
-  rising chime
+  BAG CAPACITY ALERT SOUND
 */
 
 async function playBagAlertSound() {
@@ -904,8 +899,7 @@ async function playBagAlertSound() {
 
 
 /*
-  URINE PRODUCTION ALERT:
-  urgent alternating alarm
+  URINE OUTPUT ALERT SOUND
 */
 
 async function playUrineAlertSound() {
@@ -1013,7 +1007,7 @@ function showView(
     requestedView;
 
 
-  const patientRequiredViews =
+  const patientRequired =
     new Set(
       [
         'scan',
@@ -1025,7 +1019,7 @@ function showView(
 
 
   if (
-    patientRequiredViews.has(
+    patientRequired.has(
       name
     )
 
@@ -1188,7 +1182,8 @@ function totalUrineForPatient(
         row
       ) =>
 
-        total +
+        total
+        +
         asNumber(
           row.urine
         ),
@@ -1204,15 +1199,6 @@ function renderPatientSelection() {
 
   const container =
     $('patient-selection-list');
-
-
-  if (
-    !container
-  ) {
-
-    return;
-
-  }
 
 
   container.innerHTML =
@@ -1252,19 +1238,6 @@ function renderPatientSelection() {
               :
 
               'No bag attached';
-
-
-          const alertCount =
-            record.notifications.length;
-
-
-          const urineTotal =
-            totalUrineForPatient(
-              record
-            )
-            .toFixed(
-              1
-            );
 
 
           return `
@@ -1365,7 +1338,18 @@ function renderPatientSelection() {
                   </span>
 
                   <strong>
-                    ${urineTotal} mL
+
+                    ${
+                      totalUrineForPatient(
+                        record
+                      )
+                      .toFixed(
+                        1
+                      )
+                    }
+
+                    mL
+
                   </strong>
 
                 </div>
@@ -1378,7 +1362,7 @@ function renderPatientSelection() {
                   </span>
 
                   <strong>
-                    ${alertCount}
+                    ${record.notifications.length}
                   </strong>
 
                 </div>
@@ -1435,9 +1419,30 @@ function selectPatient(
   patientId
 ) {
 
+  const patient =
+    getPatientById(
+      patientId
+    );
+
+
+  if (
+    !patient
+  ) {
+
+    toast(
+      'Patient could not be selected'
+    );
+
+
+    return;
+
+  }
+
+
   /*
-    Stop monitoring whichever
-    patient was previously active.
+    Only one patient receives
+    the current physical Nesso
+    feed at a time.
   */
 
   Object
@@ -1454,27 +1459,16 @@ function selectPatient(
     );
 
 
-  const patient =
-    getPatientById(
-      patientId
-    );
-
-
-  if (
-    !patient
-  ) {
-
-    return;
-
-  }
-
-
   state.selectedPatientId =
-    patientId;
+    patient.id;
 
 
   savePatientRecords();
 
+
+  /*
+    Explicitly update the banner.
+  */
 
   updateSelectedPatientUi();
 
@@ -1491,20 +1485,53 @@ function selectPatient(
 }
 
 
+/* =====================================
+   SELECTED PATIENT BANNER
+===================================== */
+
 function updateSelectedPatientUi() {
 
   const patient =
     getSelectedPatient();
 
 
+  const record =
+    getSelectedRecord();
+
+
   if (
     !patient
   ) {
+
+    $('scan-patient-name')
+      .textContent =
+        'No patient selected';
+
+
+    $('scan-patient-details')
+      .textContent =
+        'Return to patient list';
+
+
+    $('demo-qr-code-text')
+      .textContent =
+        'Select a patient first';
+
+
+    $('scan-message')
+      .textContent =
+        'Select a patient first.';
+
 
     return;
 
   }
 
+
+  /*
+    This is the key fix for the
+    blank selected-patient banner.
+  */
 
   $('scan-patient-name')
     .textContent =
@@ -1515,18 +1542,42 @@ function updateSelectedPatientUi() {
     .textContent =
 
       `${patient.id} · ` +
-      `Ward ${patient.ward.replace('Ward ', '')} · ` +
+      `${patient.ward} · ` +
       `Bed ${patient.bed}`;
-
-
-  const demoQr =
-    getDemoBagQr();
 
 
   $('demo-qr-code-text')
     .textContent =
-      demoQr ||
-      'Select a patient first';
+
+      getDemoBagQr()
+
+      ||
+
+      '';
+
+
+  if (
+    record &&
+    record.bag.id
+  ) {
+
+    $('scan-message')
+      .textContent =
+
+        `Current bag: ` +
+        `${record.bag.id} · ` +
+        `${record.bag.capacityMl} mL. ` +
+        `Scan again to attach a new bag.`;
+
+  } else {
+
+    $('scan-message')
+      .textContent =
+
+        `Ready to attach a urinary bag ` +
+        `to ${patient.name}.`;
+
+  }
 
 }
 
@@ -1589,8 +1640,8 @@ function parseBagQr(
 
 
       if (
-        position ===
-        -1
+        position <
+        0
       ) {
 
         return;
@@ -1598,28 +1649,21 @@ function parseBagQr(
       }
 
 
-      const key =
+      fields[
         part
           .slice(
             0,
             position
           )
           .trim()
-          .toUpperCase();
+          .toUpperCase()
+      ] =
 
-
-      const value =
         part
           .slice(
             position + 1
           )
           .trim();
-
-
-      fields[
-        key
-      ] =
-        value;
 
     }
   );
@@ -1700,8 +1744,11 @@ function completeDemoScan() {
 
 
   applyScannedBag(
+
     qr,
+
     'Demo QR'
+
   );
 
 }
@@ -1750,9 +1797,7 @@ function applyScannedBag(
 
 
     /*
-      Safety check:
-      scanned patient must match
-      selected patient.
+      Patient safety check.
     */
 
     if (
@@ -1767,8 +1812,8 @@ function applyScannedBag(
       const message =
 
         `The scanned bag belongs to ` +
-        `${bag.patient}, but the selected ` +
-        `patient is ${patient.name} (${patient.id}).`;
+        `${bag.patient}, but the selected patient is ` +
+        `${patient.name} (${patient.id}).`;
 
 
       $('scan-message')
@@ -1804,6 +1849,20 @@ function applyScannedBag(
     const now =
       new Date()
         .toISOString();
+
+
+    Object
+      .values(
+        state.patientRecords
+      )
+      .forEach(
+        otherRecord => {
+
+          otherRecord.monitoringActive =
+            false;
+
+        }
+      );
 
 
     record.loggingDate =
@@ -1849,11 +1908,6 @@ function applyScannedBag(
 
     };
 
-
-    /*
-      Baseline for this patient's
-      urine logging.
-    */
 
     record.lastSensorTotal =
       Number(
@@ -1909,7 +1963,10 @@ function applyScannedBag(
     $('scan-message')
       .textContent =
 
-        error.message ||
+        error.message
+
+        ||
+
         String(
           error
         );
@@ -1994,7 +2051,9 @@ async function startCamera() {
         new BarcodeDetector({
 
           formats:
-            ['qr_code']
+            [
+              'qr_code'
+            ]
 
         });
 
@@ -2030,7 +2089,8 @@ async function startCamera() {
 
               applyScannedBag(
 
-                codes[0].rawValue,
+                codes[0]
+                  .rawValue,
 
                 'QR scan'
 
@@ -2073,7 +2133,6 @@ async function startCamera() {
 
     $('scan-message')
       .textContent =
-
         'Camera unavailable. Use Demo QR.';
 
 
@@ -2100,10 +2159,8 @@ function stopCamera() {
       .srcObject
       .getTracks()
       .forEach(
-
         track =>
           track.stop()
-
       );
 
   }
@@ -2185,7 +2242,9 @@ function updatePatientDetails() {
     .textContent =
 
       record.bag.id
+
       ||
+
       'Not attached';
 
 
@@ -2193,7 +2252,9 @@ function updatePatientDetails() {
     .textContent =
 
       record.bag.capacityMl
+
       ||
+
       '—';
 
 
@@ -2201,7 +2262,9 @@ function updatePatientDetails() {
     .textContent =
 
       record.bag.deviceId
+
       ||
+
       'Not linked';
 
 
@@ -2251,7 +2314,7 @@ function updatePatientDetails() {
 
 
 /* =====================================
-   BAG VOLUME / CAPACITY
+   BAG CAPACITY
 ===================================== */
 
 function getCurrentBagVolume(
@@ -2267,11 +2330,6 @@ function getCurrentBagVolume(
 
   }
 
-
-  /*
-    Only the actively monitored patient
-    uses the current Nesso value.
-  */
 
   if (
     record.monitoringActive
@@ -2295,10 +2353,6 @@ function getCurrentBagVolume(
         0
       );
 
-
-    /*
-      Handle Nesso counter reset.
-    */
 
     if (
       current <
@@ -2551,10 +2605,6 @@ function evaluateBagCapacity(
     record.bag.sessionId;
 
 
-  let newAlert =
-    false;
-
-
   const milestones =
     [
 
@@ -2589,6 +2639,10 @@ function evaluateBagCapacity(
     ];
 
 
+  let newestAlert =
+    null;
+
+
   milestones
     .forEach(
       milestone => {
@@ -2618,8 +2672,15 @@ function evaluateBagCapacity(
             added
           ) {
 
-            newAlert =
-              true;
+            newestAlert = {
+
+              title:
+                milestone.title,
+
+              message:
+                milestone.message
+
+            };
 
           }
 
@@ -2654,8 +2715,15 @@ function evaluateBagCapacity(
       added
     ) {
 
-      newAlert =
-        true;
+      newestAlert = {
+
+        title:
+          'URGENT: Urinary bag overflow risk',
+
+        message:
+          status.message
+
+      };
 
     }
 
@@ -2663,63 +2731,16 @@ function evaluateBagCapacity(
 
 
   if (
-    newAlert
+    newestAlert
   ) {
-
-    let title =
-      'Urinary bag alert';
-
-
-    if (
-      status.level ===
-      'overflow'
-    ) {
-
-      title =
-        'URGENT: Urinary bag overflow risk';
-
-    } else if (
-      status.level ===
-      'full'
-    ) {
-
-      title =
-        'Urinary bag full';
-
-    } else if (
-      status.level ===
-      'nearly-full'
-    ) {
-
-      title =
-        'Urinary bag nearly full';
-
-    } else if (
-      status.level ===
-      'three-quarter'
-    ) {
-
-      title =
-        'Urinary bag 75% full';
-
-    } else if (
-      status.level ===
-      'half'
-    ) {
-
-      title =
-        'Urinary bag half full';
-
-    }
-
 
     showMainAlertForPatient(
 
       patient,
 
-      title,
+      newestAlert.title,
 
-      status.message
+      newestAlert.message
 
     );
 
@@ -2735,7 +2756,7 @@ function evaluateBagCapacity(
 
 
 /* =====================================
-   SENSOR READING
+   SENSOR DATA
 ===================================== */
 
 function normalizeReading(
@@ -2757,11 +2778,17 @@ function normalizeReading(
     Number(
 
       input.volume
+
       ??
+
       input.volume_ml
+
       ??
+
       input.totalVolumeMl
+
       ??
+
       input.total_volume_ml
 
     );
@@ -2787,11 +2814,17 @@ function normalizeReading(
       Number(
 
         input.pulses
+
         ??
+
         input.pulseCount
+
         ??
+
         input.pulse_count
+
         ??
+
         0
 
       ),
@@ -2801,11 +2834,17 @@ function normalizeReading(
       Number(
 
         input.turbidityRaw
+
         ??
+
         input.turbidity_raw
+
         ??
+
         input.raw
+
         ??
+
         0
 
       ),
@@ -2815,9 +2854,13 @@ function normalizeReading(
       Number(
 
         input.vout
+
         ??
+
         input.Vout
+
         ??
+
         0
 
       ),
@@ -2827,11 +2870,17 @@ function normalizeReading(
       Number(
 
         input.vin
+
         ??
+
         input.Vin
+
         ??
+
         input.turbidity_v
+
         ??
+
         0
 
       ),
@@ -2841,9 +2890,13 @@ function normalizeReading(
       String(
 
         input.clarity
+
         ??
+
         input.status
+
         ??
+
         'UNKNOWN'
 
       )
@@ -2875,10 +2928,6 @@ function acceptLiveReading(
   }
 
 
-  /*
-    Global physical Nesso reading.
-  */
-
   state.liveReading =
     reading;
 
@@ -2905,9 +2954,16 @@ function acceptLiveReading(
             [],
 
             {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
+
+              hour:
+                '2-digit',
+
+              minute:
+                '2-digit',
+
+              second:
+                '2-digit'
+
             }
 
           );
@@ -2919,15 +2975,15 @@ function acceptLiveReading(
     getSelectedRecord();
 
 
-  /*
-    Only attribute sensor data to the
-    selected patient after a bag has
-    actually been attached.
-  */
-
   if (
-    record &&
-    record.monitoringActive &&
+    record
+
+    &&
+
+    record.monitoringActive
+
+    &&
+
     record.bag.id
   ) {
 
@@ -2987,7 +3043,7 @@ function acceptLiveReading(
 
 
 /* =====================================
-   3-MINUTE TIME WINDOWS
+   3-MINUTE WINDOWS
 ===================================== */
 
 function windowKey(
@@ -3017,9 +3073,13 @@ function windowKey(
 
 
   current.setMinutes(
+
     startMinute,
+
     0,
+
     0
+
   );
 
 
@@ -3058,12 +3118,14 @@ function windowLabel(
     );
 
 
-  const display =
+  const format =
     date =>
 
       `${String(
         date.getHours()
-      ).padStart(2, '0')}:` +
+      ).padStart(2, '0')}:`
+
+      +
 
       `${String(
         date.getMinutes()
@@ -3072,9 +3134,15 @@ function windowLabel(
 
   return (
 
-    `${display(start)}` +
-    `–` +
-    `${display(end)}`
+    `${format(start)}`
+
+    +
+
+    `–`
+
+    +
+
+    `${format(end)}`
 
   );
 
@@ -3227,7 +3295,7 @@ function processWindowSensorVolume(
 
   if (
     record.lastSensorTotal ===
-    null
+      null
 
     ||
 
@@ -3258,10 +3326,6 @@ function processWindowSensorVolume(
 
   let delta;
 
-
-  /*
-    Nesso counter reset.
-  */
 
   if (
     current +
@@ -3318,7 +3382,9 @@ function processWindowSensorVolume(
           asNumber(
             row.urine
           )
+
           +
+
           delta
         )
 
@@ -3338,10 +3404,6 @@ function processWindowSensorVolume(
   savePatientRecords();
 
 
-  /*
-    High output can alert immediately.
-  */
-
   evaluateUrineWindow(
 
     record,
@@ -3353,11 +3415,6 @@ function processWindowSensorVolume(
   );
 
 
-  /*
-    Low output is checked for
-    completed windows.
-  */
-
   evaluateCompletedWindowsForRecord(
     record
   );
@@ -3366,7 +3423,7 @@ function processWindowSensorVolume(
 
 
 /* =====================================
-   URINE PRODUCTION ALERTS
+   URINE THRESHOLD ALERTS
 ===================================== */
 
 function evaluateUrineWindow(
@@ -3414,7 +3471,7 @@ function evaluateUrineWindow(
 
 
   /*
-    HIGH URINE OUTPUT
+    HIGH OUTPUT
   */
 
   if (
@@ -3469,10 +3526,7 @@ function evaluateUrineWindow(
 
 
   /*
-    LOW URINE OUTPUT
-
-    Only after the 3-minute
-    window finishes.
+    LOW OUTPUT
   */
 
   if (
@@ -3589,10 +3643,6 @@ function evaluateAllPatientCompletedWindows() {
 
 }
 
-
-/* =====================================
-   CURRENT WINDOW STATUS
-===================================== */
 
 function getCurrentWindowStatus(
   record
@@ -3820,10 +3870,8 @@ function getAllWardNotifications() {
       state.patientRecords
     )
     .flatMap(
-
       record =>
         record.notifications
-
     )
     .sort(
 
@@ -3849,18 +3897,15 @@ function getAllWardNotifications() {
 
 function updateNotificationDot() {
 
-  const notifications =
-    getAllWardNotifications();
-
-
   $('notification-dot')
     .classList
     .toggle(
 
       'hidden',
 
-      notifications.length ===
-      0
+      getAllWardNotifications()
+        .length ===
+        0
 
     );
 
@@ -3894,9 +3939,9 @@ function renderNotifications() {
         </strong>
 
         <p>
-          Bag-capacity and urine-output
-          alerts for Aisha Rahman and
-          John Miller will appear here.
+          Bag-capacity and urine-output alerts
+          for Aisha Rahman and John Miller
+          will appear here.
         </p>
 
       </div>
@@ -3925,11 +3970,8 @@ function renderNotifications() {
             <div class="alert-patient-label">
 
               <strong>
-
                 ${escapeHtml(notification.patientName)}
-
               </strong>
-
 
               <span>
 
@@ -3943,16 +3985,12 @@ function renderNotifications() {
 
 
             <strong>
-
               ${escapeHtml(notification.title)}
-
             </strong>
 
 
             <p>
-
               ${escapeHtml(notification.message)}
-
             </p>
 
 
@@ -4082,7 +4120,9 @@ function updateDashboard() {
     .textContent =
 
       record.bag.id
+
       ||
+
       'NO BAG';
 
 
@@ -4114,9 +4154,8 @@ function updateDashboard() {
   $('sensor-total-value')
     .textContent =
 
-      Number(
-        state.liveReading.volume ||
-        0
+      asNumber(
+        state.liveReading.volume
       )
       .toFixed(
         1
@@ -4127,9 +4166,11 @@ function updateDashboard() {
     .textContent =
 
       Math.round(
+
         asNumber(
           state.liveReading.pulses
         )
+
       );
 
 
@@ -4137,9 +4178,11 @@ function updateDashboard() {
     .textContent =
 
       Math.round(
+
         asNumber(
           state.liveReading.turbidityRaw
         )
+
       );
 
 
@@ -4169,7 +4212,9 @@ function updateDashboard() {
     .textContent =
 
       state.liveReading.clarity
+
       ||
+
       'UNKNOWN';
 
 
@@ -4197,7 +4242,9 @@ function updateDashboard() {
     .textContent =
 
       record.bag.capacityMl
+
       ||
+
       '—';
 
 
@@ -4301,7 +4348,7 @@ function updateDashboard() {
       'success',
 
       bag.level ===
-      'normal'
+        'normal'
 
     );
 
@@ -4333,7 +4380,7 @@ function updateDashboard() {
 
 
 /* =====================================
-   FLUID BALANCE CALCULATIONS
+   FLUID BALANCE
 ===================================== */
 
 function calculateFluidRows(
@@ -4420,7 +4467,9 @@ function calculateFluidRows(
             runningInput *
             10
           )
+
           /
+
           10,
 
         runningOutput:
@@ -4429,7 +4478,9 @@ function calculateFluidRows(
             runningOutput *
             10
           )
+
           /
+
           10,
 
         balance:
@@ -4437,7 +4488,8 @@ function calculateFluidRows(
           Math.round(
 
             (
-              runningInput -
+              runningInput
+              -
               runningOutput
             )
 
@@ -4446,7 +4498,9 @@ function calculateFluidRows(
             10
 
           )
+
           /
+
           10
 
       };
@@ -4563,22 +4617,25 @@ function inputCell(
   return `
 
     <input
+
       class="${className}"
+
       type="${type}"
+
       ${extra}
+
       value="${escapeHtml(row[field] ?? '')}"
+
       data-row="${escapeHtml(row.key)}"
+
       data-field="${field}"
+
     >
 
   `;
 
 }
 
-
-/* =====================================
-   FLUID BALANCE RENDER
-===================================== */
 
 function renderFluidChart() {
 
@@ -4680,9 +4737,13 @@ function renderFluidChart() {
                   calc-cell
                   ${
                     row.balance < 0
+
                       ?
+
                       'balance-negative'
+
                       :
+
                       'balance-positive'
                   }
                 "
@@ -4899,7 +4960,7 @@ function handleFluidInput(
 
 
 /* =====================================
-   THRESHOLDS
+   SETTINGS
 ===================================== */
 
 function saveWindowThresholds(
@@ -5019,60 +5080,62 @@ function syncSettings() {
     getSelectedRecord();
 
 
-  if (
-    !patient ||
-    !record
-  ) {
-
-    $('settings-patient-name')
-      .textContent =
-        'None selected';
-
-
-    $('settings-patient-id')
-      .textContent =
-        '—';
-
-
-    $('settings-bag-id')
-      .textContent =
-        '—';
-
-
-    $('settings-bag-capacity')
-      .textContent =
-        '—';
-
-
-    return;
-
-  }
-
-
   $('settings-patient-name')
     .textContent =
-      patient.name;
+
+      patient
+
+        ?
+
+        patient.name
+
+        :
+
+        'None selected';
 
 
   $('settings-patient-id')
     .textContent =
-      patient.id;
+
+      patient
+
+        ?
+
+        patient.id
+
+        :
+
+        '—';
 
 
   $('settings-bag-id')
     .textContent =
 
+      record &&
       record.bag.id
-      ||
-      'Not attached';
+
+        ?
+
+        record.bag.id
+
+        :
+
+        '—';
 
 
   $('settings-bag-capacity')
     .textContent =
 
+      record &&
       record.bag.capacityMl
-      ||
-      '—';
+
+        ?
+
+        record.bag.capacityMl
+
+        :
+
+        '—';
 
 }
 
@@ -5083,29 +5146,28 @@ function syncSettings() {
 
 function simulateReading() {
 
-  const next =
-    Number(
-      state.liveReading.volume ||
-      0
-    )
-    +
-    25;
-
-
   acceptLiveReading(
 
     {
 
       volume:
-        next,
+
+        asNumber(
+          state.liveReading.volume
+        )
+
+        +
+
+        25,
 
       pulses:
 
-        Number(
-          state.liveReading.pulses ||
-          0
+        asNumber(
+          state.liveReading.pulses
         )
+
         +
+
         112,
 
       turbidityRaw:
@@ -5125,7 +5187,8 @@ function simulateReading() {
 
         +
 
-        Math.random() *
+        Math.random()
+        *
         0.06,
 
       vin:
@@ -5134,7 +5197,8 @@ function simulateReading() {
 
         +
 
-        Math.random() *
+        Math.random()
+        *
         0.09,
 
       clarity:
@@ -5150,37 +5214,24 @@ function simulateReading() {
 
 
 /* =====================================
-   SERIAL PARSING
+   SERIAL
 ===================================== */
 
 function parsePrototypeLine(
   line
 ) {
 
-  const clean =
+  const parts =
     String(
       line ||
       ''
     )
-    .trim();
-
-
-  if (
-    !clean
-  ) {
-
-    return false;
-
-  }
-
-
-  const parts =
-    clean
-      .split(',')
-      .map(
-        value =>
-          value.trim()
-      );
+    .trim()
+    .split(',')
+    .map(
+      value =>
+        value.trim()
+    );
 
 
   if (
@@ -5194,13 +5245,21 @@ function parsePrototypeLine(
 
 
   const [
+
     timeMs,
+
     volume,
+
     pulses,
+
     raw,
+
     vout,
+
     vin,
+
     status
+
   ] =
     parts;
 
@@ -5259,10 +5318,6 @@ function parsePrototypeLine(
 
 }
 
-
-/* =====================================
-   DIRECT WEB SERIAL
-===================================== */
 
 async function connectSerial() {
 
@@ -5426,20 +5481,35 @@ function exportFluidCsv() {
     [
 
       'Patient_ID',
+
       'Patient_Name',
+
       'Ward',
+
       'Bed',
+
       'Logging_Date',
+
       'Monitoring_Window',
+
       'Oral_mL',
+
       'IV_Fluids_mL',
+
       'IV_Meds_mL',
+
       'Running_Input_mL',
+
       'Urine_Auto_mL',
+
       'Drain_mL',
+
       'Vomit_mL',
+
       'Running_Output_mL',
+
       'Cumulative_Balance_mL',
+
       'RN_Initials'
 
     ];
@@ -5528,8 +5598,10 @@ function exportFluidCsv() {
       ],
 
       {
+
         type:
           'text/csv;charset=utf-8'
+
       }
 
     );
@@ -5583,7 +5655,7 @@ function exportFluidCsv() {
 
 
 /* =====================================
-   RESET PATIENT SESSION
+   RESET SESSION
 ===================================== */
 
 function resetFluidSession() {
@@ -5606,17 +5678,10 @@ function resetFluidSession() {
   }
 
 
-  const confirmed =
-    confirm(
-
-      `Start a new fluid-balance ` +
-      `session for ${patient.name}?`
-
-    );
-
-
   if (
-    !confirmed
+    !confirm(
+      `Start a new fluid-balance session for ${patient.name}?`
+    )
   ) {
 
     return;
@@ -5660,8 +5725,11 @@ function resetFluidSession() {
 const TRUSTED_LOGGER_ORIGINS =
   new Set(
     [
+
       'http://127.0.0.1:5000',
+
       'http://localhost:5000'
+
     ]
   );
 
@@ -5696,7 +5764,9 @@ function handleBridgePayload(
   acceptLiveReading(
 
     payload.reading
+
     ||
+
     payload,
 
     'Nesso N1 Sensor Logger'
@@ -5744,7 +5814,7 @@ window.addEventListener(
 
 
 /* =====================================
-   EVENT LISTENERS
+   EVENTS
 ===================================== */
 
 $('login-form')
@@ -5921,11 +5991,6 @@ $('hourly-threshold-form')
   );
 
 
-/*
-  Demonstrate low / normal / high
-  without waiting three minutes.
-*/
-
 $('evaluate-hour-now')
   .addEventListener(
 
@@ -5969,7 +6034,7 @@ $('evaluate-hour-now')
         true;
 
 
-      const before =
+      const alertsBefore =
         record.notifications.length;
 
 
@@ -5986,7 +6051,7 @@ $('evaluate-hour-now')
 
       if (
         record.notifications.length ===
-        before
+        alertsBefore
       ) {
 
         const urine =
@@ -6013,10 +6078,14 @@ $('evaluate-hour-now')
       savePatientRecords();
 
 
-      updateDashboard();
+      if (
+        state.currentView ===
+        'dashboard'
+      ) {
 
+        updateDashboard();
 
-      renderFluidChart();
+      }
 
     }
 
@@ -6030,12 +6099,8 @@ $('test-bag-sound')
 
     async () => {
 
-      const ready =
-        await enableAlertSounds();
-
-
       if (
-        ready
+        await enableAlertSounds()
       ) {
 
         await playBagAlertSound();
@@ -6059,12 +6124,8 @@ $('test-urine-sound')
 
     async () => {
 
-      const ready =
-        await enableAlertSounds();
-
-
       if (
-        ready
+        await enableAlertSounds()
       ) {
 
         await playUrineAlertSound();
@@ -6131,7 +6192,7 @@ $('reset-fluid-session')
 
 
 /* =====================================
-   AUTOMATIC COMPLETED-WINDOW CHECK
+   AUTOMATIC 3-MINUTE CHECK
 ===================================== */
 
 setInterval(
